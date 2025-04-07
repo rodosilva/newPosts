@@ -3,7 +3,7 @@ date = '2025-03-23T20:32:16-05:00'
 title = 'Kubernetes Administrator CKA'
 +++
 
-## PODs
+## PODS
 ### Imperativo
 `kubectl run myapp-pod --image=nginx --dry-run=client -o yaml > myapp-pod.yaml` 
 Construye un archivo yaml que hace referencia a un pod con la imagen descrita
@@ -22,7 +22,7 @@ spec:
           image: nginx
 ```
 
-## Deployments
+## DEPLOYMENT
 ### Imperativo
 `kubectl create deployment --image=nginx nginx --replicas=4 --dry-run=client -o yaml > nginx-deployment.yaml`
 
@@ -52,7 +52,33 @@ selector:
         type: front-end
 ```
 
-## Services
+## DAEMONSETS
+Ayuda a desplegar multiples instancias de PODs
+Corre una copia de tu POD en cada nodo de tu cluster
+Con cada nodo nuevo, se añade una replica
+También asegura que una copia del POD este siempre presente en todos los nodos.
+### Declarativo
+```bash
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+    name: monitoring-daemon
+ spec:
+     selector:
+         matchLabels:
+             app: monitoring-agent
+     template:
+         metadata:
+             labels:
+                 app: monitoring-agent
+         spec:
+             containers:
+                 - name: monitoring-agent
+                   image: monitoring-agent
+
+```
+
+## SERVICES
 ### Node Port
 ![](Pasted%20image%2020250323210547.png)
 ```bash
@@ -107,7 +133,7 @@ metadata:
 ```
 Soporte en: AWS, Azure, GoogleCloud
 
-## ConfigMap
+## CONFIGMAP
 ### Imperativo
 - `kubectl create configmap app-config --from-literal=APP_COLOR=blue --from-literal=APP_MOD=prod`
 - `kubectl create configmap <config-name> --from-file=<path-to-file>`
@@ -145,7 +171,7 @@ spec:
                   name: app-config # <<<<<--- HERE
 ```
 
-## ReplicaSet
+## REPLICASET
 Alta disponibilidad
 
 ### Declarativo
@@ -214,7 +240,38 @@ selector:
     matchlabels:
         tier.front-end 
 ```
-## Troubleshooting
+## NETWORKING
+### Instalación de Network Plugins
+- `kubectl apply -f https://github.com/weaveworks/weave/releases/download/v2.8.1/weave-daemonset-k8s.yaml` Weave Net
+- `kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/2140ac876ef134e0ed5af15c65e414cf26827915/Documentation/kube-flannel.yml` Flannel
+- `curl https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/calico.yaml -O` & `kubectl apply -f calico.yaml` Calico
+- 
+
+### DNS en Kubernetes
+#### Sub Dominios
+
+| Hostname    | Namespace | Type | Root          | IP Address    |
+| ----------- | --------- | ---- | ------------- | ------------- |
+| web-service | apps      | svc  | cluster.local | 10.107.37.188 |
+| web         | apps      | pod  | cluster.local | 10.244.2.5    |
+- FQDN: `web-service.apps.svc.cluster.local`, `web.apps.pod.cluster.local`
+### Core DNS
+Kubernetes usa `CoreDNS`. Es un Server DNS flexible y extensible que puede servir como un cluster DNS de Kubernetes.
+- Archivo de configuración: `/etc/coredns/corefile`
+- ConfigMap: `kubectl get configmap -n kube-system`
+#### Recursos
+- Service account: `coredns`
+- Cluster-roles: `coredns` y `kubedns`
+- Cluster role bindings: `coredns` y `kube-dns`
+- Deployment: `coredns`
+- Configmap: `coredns`
+- Service: `kube-dns`
+### Kube-Proxy
+Mantiene las reglas de red en los nodos.
+Estas reglas permiten la comunicación hacia los PODs desde las sesiones dentro o fuera del cluster.
+- Archivo de configuración: `/var/lib/kube-proxy/config.conf`
+
+## TROUBLESHOOTING
 
 ### Comandos Básicos de Troubleshooting
 - `Kubectl get nodes` Estado de los Nodos
@@ -248,3 +305,7 @@ Aquí encontraremos algunas rutas importantes a recordar que el `kubelet` utiliz
 
 - `/var/lib/kubelet/config.yaml` Ruta local de un `nodo` donde guarda la configuración del `kubelet service`. Dicho servicio toma las opciones de este archivo.
 - `/etc/kubernetes/kubelet.conf` Archivo local de configuración de un `nodo`  usado por `kubelet` para conectarse con el `api server`
+
+### CoreDNS y Kube-proxy
+- `1. kubectl -n kube-system get deployment coredns -o yaml | sed 's/allowPrivilegeEscalation: false/allowPrivilegeEscalation: true/g' | kubectl apply -f -` Esto puede solucionar el Error de `CrashLoopBackOff`
+- `netstat -plan | grep kube-proxy` Revisar si `kube-proxy` esta corriendo dentro del contenedor
