@@ -369,3 +369,134 @@ Considerando estos archivos `JSON`
 | `$[*].modelo`        | `["X3", "X4"]`             |
 | `$.*.aros[*].modelo` | `["X3", "X4", "Z3", "Z4"]` |
 - `*`: Significa todos o cualquier propiedad del diccionario
+
+## JSON PATH Lists
+
+Considerando la data:
+```json
+[
+  "Apple",
+  "Google",
+  "Microsoft",
+  "Amazon",
+  "Facebook",
+  "Coca-Cola",
+  "Samsung",
+  "Disney",
+  "Toyota",
+  "McDonald's"
+]
+```
+
+
+| Query                 | Resultado                                                      | Explicación                                                                                                 |
+| --------------------- | -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `$[0:8:2]`            | [<br>"Apple",<br>"Microsoft",<br>"Facebook",<br>"Samsung"<br>] | Del 0 al 8 (Sin considerar el 8)<br>Haciendo un salto                                                       |
+| `$[-1:0]`<br>`$[-1:]` | [ "McDonald's" ]                                               | Empezando del último se le da un valor de `-1` luego `-2` y así en adelante hasta el `-10` (Para este caso) |
+| `$[-3:]`              | [<br>"Disney",<br>"Toyota",<br>"McDonald's"<br>]               |                                                                                                             |
+
+## JSON PATH en Kubernetes
+1. Identificar el comando `kubectl`: `kubectl get pods`
+2. Reconocer la salida en formato `JSON`: `kubectl get pods -o json`
+3. Realizar la consulta en `JSON PATH`(No es necesario usar el `$`): `.items[0].spec.containers[0].image`
+4. Combinar el `kubectl` con `JSON PATH`: `kubectl get pods -o=jsonpath='{ .items[0].spec.containers[0].image }'`
+
+### Otros ejemplos
+Del archivo `yaml`:
+```json
+{
+  "apiVersion": "v1",
+  "items": [
+    {
+      "apiVersion": "v1",
+      "kind": "Node",
+      "metadata": {
+        "name": "master"
+      },
+      "status": {
+        "capacity": {
+          "cpu": "4"
+        },
+        "nodeInfo": {
+          "architecture": "amd64",
+          "operationgSystem": "linux",
+        }
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "Node",
+      "metadata": {
+        "name": "node01",
+      },
+      "status": {
+        "capacity": {
+          "cpu": "4",
+        },
+        "nodeInfo": {
+          "architecture": "amd64",
+          "operationgSystem": "linux",
+        }
+      }      
+    }
+  ],
+
+...
+```
+
+- `kubectl get pods -o=jsonpath='{.items[*].metadata.name}'`
+```
+master node01
+```
+- `kubectl get pods -o=jsonpath='{.items[*].status.nodeInfo.architecture}'`
+```
+amd64 amd64
+```
+- `kubectl get pods -o=jsonpath='{.items[*].status.capacity.cpu}'`
+```
+4 4
+```
+- `kubectl get pods -o=jsonpath='{.items[*].metadata.name}{.items[*].status.capacity.cpu}'`
+```
+master node01 4 4
+```
+- `kubectl get pods -o=jsonpath='{.items[*].metadata.name}{"\n"}{.items[*].status.capacity.cpu}'`
+```
+master node01
+4 4
+```
+-  `kubectl get pods -o=jsonpath='{.items[*].metadata.name}{"\t"}{.items[*].status.capacity.cpu}'`
+```
+master node    4 4 
+```
+
+### Loops - Range
+Similar al uso de `for each`
+- `kubectl get nodes -o=jsonpath='{range .items[*]}{metadata.name}{"\t"}{.status.capacity.cpu}{\"n"}{end}'`
+
+```
+master    4
+node01    4
+```
+
+### JSON PATH para columnas personalizadas
+Considerando que queremos una columna llamada `NODE` y otra `CPU`
+- `kubectl get nodes -o=custom-columns=NODE:.metadata.name ,CPU:.status.capacity.cpu`
+```
+NODE    CPU
+master  4
+node01  4
+```
+
+> NOTA: no es necesario colocar el `items[*]`
+
+### JSON PATH Ordenar por
+Usando el `sort-by`
+- `kubectl get nodes --sort-by= .metadata.name`
+```
+NAME    STATUS    ROLES    AGE  VERSION
+master  Ready     master   5m   v1.11.3 
+node01  Ready     <none>   5m   v1.11.3
+```
+
+
