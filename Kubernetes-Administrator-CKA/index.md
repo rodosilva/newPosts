@@ -271,6 +271,144 @@ Mantiene las reglas de red en los nodos.
 Estas reglas permiten la comunicación hacia los PODs desde las sesiones dentro o fuera del cluster.
 - Archivo de configuración: `/var/lib/kube-proxy/config.conf`
 
+## STORAGE
+### Volumes Y VolumeMounts
+La forma mas simple de usar volúmenes sería:
+```yaml
+apiVersion: v1
+kind: Pod
+metadata: 
+    name: random-number-generator
+spec:
+    containers:
+        - image: alpine
+          name: alpine
+          command: ["/bin/sh","-c"]
+          args: ["shuf -i 0-100 -n 1 >> /opt/number.out;"]
+          volumeMounts:
+              - mountPath: /opt
+                name: data-volume
+    volumes:
+        - name: data-volume
+          hostPath:
+              path: /data
+              type: Directory
+```
+### Persistent Volumes
+Son volúmenes que se crean para estar disponibles ante algún `persistent volume claim` para su uso.
+
+Ya sea usando almacenamiento de `AWS`
+```yaml
+# pv-definition.yaml
+
+apiVersion: v1
+kind: PersistentVolume
+metadata: pv-voll
+spec:
+    accessModes:
+        - [ ReadWriteOnce ReadOnlyMany ReadWriteMany ]
+    capacity:
+        storage: 1Gi
+    awsElasticBlockStore:
+        volumeID: [volume-id]
+        fsType: ext4
+```
+
+O almacenamiento local:
+```yaml
+# pv-definition.yaml example2
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+    name: pv-log
+spec:
+    persistentVolumeReclaimPolicy: Retain
+    accessModes:
+        - ReadWriteMany
+    capacity:
+        storage: 100Mi
+    hostPath:
+      path: /pv/log
+```
+
+- `persistentVolumeReclaimPolicy: Retain`: Es el de defecto. Luego de ser borrado, el volumen se retiene
+- `persistentVolumeReclaimPolicy: Deleted`: Luego de ser borrado, el volumen se borra
+- `persistentVolumeReclaimPolicy: Recycle`: Luego de ser borrado, el volumen se recicla
+
+### Persistent Volume Claims
+Estos son los que solicitan para que los nodes adquieran almacenamiento
+Dependerá de si el `persistent volume` tiene suficiente capacidad así como hacer `match` con el `accessModes`:
+
+```
+# pvc-definition.yaml
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: 
+    name: myClaim
+spec:
+    accessModes:
+        - ReadWriteOnce
+    resources:
+        requests:
+            storage: 500Mi
+```
+
+### Persistent Volume Claims en PODs
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mypod
+spec:
+  containers:
+    - name: myfrontend
+      image: nginx
+      volumeMounts:
+      - mountPath: "/var/www/html"
+        name: mypd
+  volumes:
+    - name: mypd
+      persistentVolumeClaim:
+        claimName: myclaim
+```
+
+### Storage Class
+Le otorga al administrador definir las clases de almacenamiento que se tienen para ofrecer.
+Con `Storage Class` puedes definir un `provisioner` como Google que puede aprovisionar automáticamente en Google Cloud y enlazarlo a un POD.
+```yaml
+# sc-definition.yaml
+
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+    name: google-storage
+provisioner: kubernetes.io/gce-pd
+parameters:
+    type: [ pd-standard | pd-ssd ]
+    replication-type: [ none | regional-pd ]
+```
+
+`Persistent Volume` se creará automáticamente
+Entonces el vínculo del `storage class` se realiza con el `persistent volume claim`
+```yaml
+# pvc-definition.yaml
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+    name: myclaim
+spec:
+    accessModes:
+        - ReadWriteOnce
+    storageClassName: google-storage
+    resources:
+        requests:
+            storage: 500Mi
+```
+
 ## TROUBLESHOOTING
 
 ### Comandos Básicos de Troubleshooting
