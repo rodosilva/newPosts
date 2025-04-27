@@ -309,3 +309,110 @@ Aquí encontraremos algunas rutas importantes a recordar que el `kubelet` utiliz
 ### CoreDNS y Kube-proxy
 - `1. kubectl -n kube-system get deployment coredns -o yaml | sed 's/allowPrivilegeEscalation: false/allowPrivilegeEscalation: true/g' | kubectl apply -f -` Esto puede solucionar el Error de `CrashLoopBackOff`
 - `netstat -plan | grep kube-proxy` Revisar si `kube-proxy` esta corriendo dentro del contenedor
+
+## UPGRADE KUBEADM & NODES
+Antes que nada debemos verificar el repositorio.
+Esto aplica tanto para el `controlplane` como para los `nodos`:
+
+```bash
+vim /etc/apt/sources.list.d/kubernetes.list
+```
+Considerando que deseamos pasar a la versión `v1.32`. modificaremos la linea de la siguiente forma:
+```bash
+deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.32/deb/ /
+```
+
+### Determinar la Versión
+Tanto para `controlplane` como para los `nodos` podemos listar todas las versiones disponibles una vez actualizado el repositorio:
+```bash
+sudo apt update
+sudo apt-cache madison kubeadm
+```
+
+### Controlplane Upgrade
+#### Kubeadm Upgrade
+```bash
+# Reemplaza la 'x' por la última versión mostrada en el comando anterior
+sudo apt-mark unhold kubeadm && \
+sudo apt-get update && sudo apt-get install -y kubeadm='1.32.x-*' && \
+sudo apt-mark hold kubeadm
+```
+
+Verificamos que la descarga funcionó y tiene la versión correcta
+```bash
+kubeadm version
+```
+
+Verificamos el plan
+```bash
+sudo kubeadm upgrade plan
+```
+
+Elegimos la versión y corremos el comando
+```bash
+# Reemplaza la 'x' por la última versión mostrada arriba
+sudo kubeadm upgrade apply v1.32.x
+```
+
+#### Kubelet y Kubectl Upgrade
+```bash
+# Reemplaza la 'x'
+sudo apt-mark unhold kubelet kubectl && \
+sudo apt-get update && sudo apt-get install -y kubelet='1.32.x-*' kubectl='1.32.x-*' && \
+sudo apt-mark hold kubelet kubectl
+```
+
+Ahora reiniciamos `kubelet`
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart kubelet
+```
+
+### Nodes Upgrade
+Considerando que ya revisamos el repositorio e hicimos los cambios antes mencionados, procedemos a:
+
+#### Kubeadm Upgrade
+```bash
+# replace x in 1.32.x-* with the latest patch version
+sudo apt-mark unhold kubeadm && \
+sudo apt-get update && sudo apt-get install -y kubeadm='1.32.x-*' && \
+sudo apt-mark hold kubeadm
+```
+
+En los nodos, esto actualiza la configuración del `kubelet` local:
+```bash
+sudo kubeadm upgrade node
+```
+
+#### Drena el Nodo
+Colocamos al nodo en modo mantenimiento:
+```bash
+# Este comando se ejecuta en el controlplane
+# Reemplaza el node-tro-drain con el nombre del nodo
+kubectl drain <node-to-drain> --ignore-daemonsets
+```
+
+#### Kubelet Kubectl Upgrade
+```bash
+# replace x in 1.32.x-* with the latest patch version
+sudo apt-mark unhold kubelet kubectl && \
+sudo apt-get update && sudo apt-get install -y kubelet='1.32.x-*' kubectl='1.32.x-*' && \
+sudo apt-mark hold kubelet kubectl
+```
+
+Reiniciamos el `kubelet`
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart kubelet
+```
+
+#### Activar el Nodo
+Colocamos al nodo nuevamente en línea:
+```bash
+# execute this command on a control plane node
+# replace <node-to-uncordon> with the name of your node
+kubectl uncordon <node-to-uncordon>
+```
+
+### Referencia
+Para más información seguir el enlace [oficial](https://v1-32.docs.kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-upgrade/)
