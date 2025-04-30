@@ -240,6 +240,19 @@ selector:
     matchlabels:
         tier.front-end 
 ```
+## ROLLOUT Y VERSIONING
+Cuando creamos un `Deployment` automáticamente se dispara un `rollout`.
+A su vez un `rollout` genera una nueva versión del `Deployment`.
+Cada vez que se actualice la versión del contenedor, se genera un nuevo `rollout` lo que crea una nueva revisión del `Deployment`
+
+- Para ver el estado: `kubectl rollout status deployment myapp-deployment`
+- Para ver el historial: `kubectl rollout history deployment myapp-deployment`
+### Strategy Type
+- **Recreate**: Se destruyen todos los `PODs` antes de empezar a recrear los nuevos.
+- **RollingUpdate**: (Por defecto) Se destruyen uno o algunos mientras se van creando los nuevos de forma secuencial. `.spec.strategy.type==RollingUpdate`
+### Rollback
+Para poder realizar un `rollback`:
+- Rollback: `kubectl rollout undo deployment myapp-deployment`
 ## NETWORKING
 ### Instalación de Network Plugins
 - `kubectl apply -f https://github.com/weaveworks/weave/releases/download/v2.8.1/weave-daemonset-k8s.yaml` Weave Net
