@@ -247,12 +247,61 @@ Cada vez que se actualice la versión del contenedor, se genera un nuevo `rollou
 
 - Para ver el estado: `kubectl rollout status deployment myapp-deployment`
 - Para ver el historial: `kubectl rollout history deployment myapp-deployment`
+### Annotate
+Podemos colocar una nota del motivo del cambio (Ejemplo):
+- `kubectl annotate deployments nginx-deploy kubernetes.io/change-cause="Updated nginx image to 1.17"`
 ### Strategy Type
 - **Recreate**: Se destruyen todos los `PODs` antes de empezar a recrear los nuevos.
 - **RollingUpdate**: (Por defecto) Se destruyen uno o algunos mientras se van creando los nuevos de forma secuencial. `.spec.strategy.type==RollingUpdate`
 ### Rollback
 Para poder realizar un `rollback`:
 - Rollback: `kubectl rollout undo deployment myapp-deployment`
+
+## BACKUP & RESTORE
+### Cluster ETCD
+Para hacer uso del `etcdctl` necesitamos empezar asignando la variable de entorno:
+`export ETCDCTL_API=3`
+
+Durante el `snapshot` se necesitan colocar ciertos parámetros que los podremos encontrar en:
+`/etc/kubernetes/manifests/etcd.yaml`
+Necesitaremos tener a la mano:
+- cacert: `--peer-trusted-ca-file=/etc/kubernetes/pki/etcd/ca.crt`
+- cert: `--cert-file=/etc/kubernetes/pki/etcd/server.crt`
+- key: `--key-file=/etc/kubernetes/pki/etcd/server.key`
+- datadir: `--data-dir=/var/lib/etcd`
+
+Ya con eso podemos generar el `snapshot`:
+```bash
+# Exportamos la variable de entorno
+export ETCDCTL_API=3
+
+# Creamos el snapshot
+etcdctl snapshot save snapshot.db --endpoints=https://127.0.0.1:2379 --cacert=/etc/kubernetes/pki/etcd/ca.crt --cert=/etc/kubernetes/pki/etcd/server.crt --key=/etc/kubernetes/pki/etcd/server.key
+
+# Revisamos el estado del snapshot
+etcdctl snapshot status snapshot.db
+# Nuevas versiones usan etcdutl
+## etcdutl --write-out=table snapshot status snapshot.db
+```
+
+#### Restaurar
+Para restaurar:
+```bash
+# Detenemos el servicio apiserver
+service kube-apiserver stop
+
+# Restauramos
+export ETCDCTL_API=3
+etcdctl --data-dir <data-dir-location> snapshot restore snapshot.db
+# Nuevas versiones usan etcdutl
+## etcdutl --data-dir <data-dir-location> snapshot restore snapshot.db
+
+# Refrescar
+systemctl daemon-reload
+service etcd restart
+service kube-apiserver start
+```
+
 ## NETWORKING
 ### Instalación de Network Plugins
 - `kubectl apply -f https://github.com/weaveworks/weave/releases/download/v2.8.1/weave-daemonset-k8s.yaml` Weave Net
