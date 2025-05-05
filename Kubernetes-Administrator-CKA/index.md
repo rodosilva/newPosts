@@ -171,6 +171,69 @@ spec:
                   name: app-config # <<<<<--- HERE
 ```
 
+## SECRETS
+### Imperativo
+Creamos varios `secrets` de forma implícita:
+`kubectl create secret generic app-secret --from-literal=DB_Host=mysql --from-literal=DB_User=root --from-literal=DB_Password=paswrd`
+
+También podemos crear desde un archivo:
+`kubectl create secret generic app-secret --from-file=app_secret.properties`
+
+### Declarativo
+```yaml
+# secre-data.yaml
+
+apiVersion: v1
+kind: Secret
+metadata:
+    name: app-secret
+data:
+    DB_Host: bx1zcWw=
+    DB_User: cm9vda==
+    DB_Password: cGFzd3Jk
+```
+
+> **_NOTA:_** Para codificar (encode): `echo -n 'mysql' | base64` y para decodificar `echo -n 'bx1zcWw=' | base64 --decode`
+
+### Secrets en los PODs
+```yaml
+# pod-definition.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+    name: simple-webapp-color
+    labels:
+        name: simple-webapp-color
+spec:
+    containers:
+        - name: simple-webapp-color
+          image: simple-webapp-color
+          ports:
+              - containerPort: 8080
+          envFrom:
+              - secretRef:
+                  name: app-secret # <<< HERE
+```
+
+En el `env` cuando necesito solo una variable
+```yaml
+env:
+    - name: DB_Password
+      valueFrom:
+          secretKeyRef:
+              name: app-secret
+              key: DB_Password
+```
+
+En el `volumes`
+```yaml
+volumes:
+    - name: app-secret-volume
+      secret:
+          secretName: app-secret
+```
+
+Donde `app-secret-volume` podría ser un directorio que contiene archivos con los `secrets`
 ## REPLICASET
 Alta disponibilidad
 
@@ -239,6 +302,38 @@ metadata:
 selector:
     matchlabels:
         tier.front-end 
+```
+
+## COMMANDS & ARGUMENTS
+Considerando la diferencia:
+- **Command:** Es el comando per se. Ejemplo `command: ["sleep2.0"]`
+- **Arg**: Es el argumento que acompaña al comando. Ejemplo `args: ["10"]`
+Para este caso sería un `sleep` de `10` segundos.
+
+### Alternativas
+```yaml
+# Option 1
+command: ["sleep 5000"]
+
+# Option 2
+command:
+    - "sleep"
+    - "5000"
+```
+
+### Ejemplo
+```yaml
+# pod-definition.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+    name: ubuntu-sleeper-pod
+spec:
+    containers:
+        - name: ubuntu-sleeper
+          image: ubuntu-sleeper
+          command: ["sleep2.0"]
+          args: ["10"]
 ```
 ## ROLLOUT Y VERSIONING
 Cuando creamos un `Deployment` automáticamente se dispara un `rollout`.
