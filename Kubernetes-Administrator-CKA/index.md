@@ -711,3 +711,25 @@ kubectl uncordon <node-to-uncordon>
 
 ### Referencia
 Para más información seguir el enlace [oficial](https://v1-32.docs.kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-upgrade/)
+
+## PUERTOS Y PROTOCOLOS
+
+### ControlPlane
+
+| Protocolo | Puerto    | Propósito               |
+| --------- | --------- | ----------------------- |
+| TCP       | 6443      | API server              |
+| TCP       | 2379-2380 | ETCD server             |
+| TCP       | 10250     | Kubelet API             |
+| TCP       | 10259     | Kube-Scheduler          |
+| TCP       | 10257     | Kube-controller-manager |
+### Worker Nodes
+
+| Protocolo | Puerto      | Propósito         |
+| --------- | ----------- | ----------------- |
+| TCP       | 10250       | Kubelet API       |
+| TCP       | 10256       | Kube-Proxy        |
+| TCP       | 30000-32767 | NodePort Services |
+
+
+
