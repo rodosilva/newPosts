@@ -97,6 +97,10 @@ spec:
         type: front-end
 ```
 
+También se puede realizar de forma **imperativa:**
+```bash
+kubectl expose pod myapp --type=NodePort --port=80 --name=myapp-service --dry-run=client -o yaml
+```
 ### Cluster IP
 Servicio de Kubernetes que nos permite agrupar los PODs y proporcionar una sola interface de acceso hacia los PODs
 ![](Pasted%20image%2020250323210857.png)
@@ -334,6 +338,38 @@ spec:
           image: ubuntu-sleeper
           command: ["sleep2.0"]
           args: ["10"]
+```
+
+## ENVIRONMENT VARIABLES
+Existen dos formas de establecer variables de entorno.
+Una es utilizando `env` y la otra, utilizando `envFrom`. Esta ultima establece la variable de entorno haciendo referencia a un [CONFIGMAP](#CONFIGMAP) o a un [SECRETS](#SECRETS).
+
+Para este caso nos enfocaremos en `env`. Ejemplo:
+```bash
+apiVersion: v1
+kind: Pod
+metadata:
+  name: envar-demo
+  labels:
+    purpose: demonstrate-envars
+spec:
+  containers:
+  - name: envar-demo-container
+    image: gcr.io/google-samples/hello-app:2.0
+    env:
+    - name: DEMO_GREETING
+      value: "Hello from the environment"
+    - name: DEMO_FAREWELL
+      value: "Such a sweet sorrow"
+```
+
+También podemos utilizar campos del POD como valores para nuestras variables de entorno:
+```bash
+      env:
+        - name: MY_NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
 ```
 ## ROLLOUT Y VERSIONING
 Cuando creamos un `Deployment` automáticamente se dispara un `rollout`.
@@ -711,6 +747,58 @@ kubectl uncordon <node-to-uncordon>
 
 ### Referencia
 Para más información seguir el enlace [oficial](https://v1-32.docs.kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-upgrade/)
+
+## HELM
+De forma simplificada se podría decir que es el Package manager de Kubernetes
+### Instalación
+Se puede seguir los pasos de la página [oficial](https://helm.sh/docs/intro/install/)
+`sudo snap install helm --classic`
+
+### Componentes
+- Online Chart Repository: [artifacthub](https://artifacthub.io/)
+- Charts
+	- ![](Pasted%20image%2020250518212528.png)
+Cuando un `chart` se aplica a un cluster, se genera un `release`
+
+### Trabajando con HELM
+- `helm search hub wordpress`: Buscamos WordPress en el `artifacthub`
+- `helm search worpress`: Buscamos WordPress de forma local (Repositorio local)
+- `helm repo add bitnami https://charts.bitnami.com/bitnami`: Añadimos el Publisher `bitmapi` a modo de repositorio local
+- `helm install my-release bitnami/wordpress`: con el nombre `my-release` instalamos WordPress utilizando nuestro repositorio previamente añadido `bitmapi`
+- `helm list`: Listar los release
+- `helm repo list`: Listar los repositorios
+- `helm repo update`: Actualizar los repositorios locales
+- `helm upgrade my-release bitnami/wordpress`: Upgrade al WordPress en específico
+- `helm install my-release bitnami/wordpress --version x.x.x`: Instalar una versión en específico
+- `helm history my-release`: Ver el historial
+- `helm rollback my-release 1`: Volver a una revisión anterior. En este caso la `1`. Aunque en realidad crea una revisión nueva que es igual a la `1`
+
+### Personalizando Parámetros del Chart
+
+#### Desde el archivo value.yaml
+```yaml
+# deployment.yaml
+[...]
+- name: WORDPRESS_BLOG_NAME
+value: {{ .Values.wordpressBlogName | quote }}
+```
+
+```yaml
+# value.yaml
+wordpressBlogName: User's Blog!
+```
+
+#### De forma imperativa
+`helm install --set wordpressBlogName="Helm Tutorials" my-release bitnami/worpress`
+
+#### Usando un archivo value personalizado
+`helm install --values custom-values.yaml my-release bitnami/worpress`
+
+```yaml
+# custom-values.yaml
+worpressBlogName: Helm Tutorials
+worpressEmail: john@example.com
+```
 
 ## PUERTOS Y PROTOCOLOS
 
