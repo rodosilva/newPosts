@@ -1,15 +1,15 @@
 +++
 date = '2025-07-20T21:43:33-05:00'
-title = 'Blog-Con-Hugo-Y-GithubPages'
-+++## Obtén Tu Blog Usando HUGO y Github Pages
+title = 'Blog Con Hugo Y Github Pages'
++++
 La idea de este post es mostrar el paso a paso para obtener un Blog personal.
 
 Está no es más que una de las tantas alternativas que existen allá afuera, sin embargo, con este método, obtendrás un Blog en la Web, sin costo y que te permite añadirle posts y páginas de forma sencilla, rápida y de manera automática.
 
-### Pre-Requisitos
+## Pre-Requisitos
 - [Hugo](https://gohugo.io/installation/)
 - [Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
-### Hugo: Primeros Pasos
+## Hugo: Primeros Pasos
 Hugo es un framework que utilizaremos para tener una plantilla para nuestro blog.
 Entonces, el primer paso sería instalar `HUGO`
 
@@ -62,7 +62,7 @@ Naturalmente aun no tendrá contenido pero ya podrás ir viendo la base de tu we
 hugo server
 ```
 
-### HUGO: Crear contenido
+## HUGO: Crear contenido
 Es momento de crear el primer `post`.
 Para ello simplemente deberás ejecutar el comando:
 ```bash
@@ -92,7 +92,7 @@ Si consideras que ya está listo para publicar, simplemente deberás borrar la l
 hugo server
 ```
 
-### HUGO: Personalizando Tema
+## HUGO: Personalizando Tema
 Es importante revisar el `README.md` del tema de HUGO que hayas elegido.
 En este caso podemos notar que el tema [hugo-blog-awesome](https://github.com/hugo-sid/hugo-blog-awesome/blob/main/README.md) menciona que entre sus archivos tiene un ejemplo.
 
@@ -102,7 +102,7 @@ En este caso utilízalo como guía para hacer los cambios que veas conveniente.
 
 Para comenzar, creo que los cambios más importantes son los siguientes:
 
-#### Directorio del Contenido
+### Directorio del Contenido
 El primer paso es definir el directorio del contenido `contentDir`. 
 Se suele crear sub directorios cuando se trabaja con diferentes idiomas pero dado que este es un blog de iniciación, lo dejaremos con un solo directorio:
 
@@ -110,7 +110,7 @@ Se suele crear sub directorios cuando se trabaja con diferentes idiomas pero dad
 contentDir = "content"
 ```
 
-#### Barra de Menú
+### Barra de Menú
 Ahora toca definir lo que quieres que muestra la barra de menú.
 Por lo general se coloca un `Home`, `Posts` y `About`.
 
@@ -147,7 +147,7 @@ Esto se traduce en añadir las siguientes líneas en tu `hugo.toml`:
 Con esto estamos añadiendo una barra de menú my parecida a esta:
 ![](Pasted%20image%2020250720205550.png)
 
-#### Imagen Miniatura y Título de la Página
+### Imagen Miniatura y Título de la Página
 Es momento de colocar una pequeña imagen y un título a gusto personal en el centro.
 
 Para ello simplemente deberás colocar una imagen dentro del directorio `assets/` y mantener el nombre, formato y tamaño de la imagen (628x640)
@@ -167,7 +167,7 @@ Finalmente añadir las siguientes lineas al ya conocido `hugo.toml`
   description = "Un blog sencillo y minimalista realizado durante una         prueba"
 ```
 
-#### Añadiendo Redes Sociales y Go to Top
+### Añadiendo Redes Sociales y Go to Top
 Ya para terminar de personalizar el blog, puedes colocar algunas redes sociales a modo de enlaces.
 
 Además, algo útil es colocar una flecha para ir al inicio de un post cuando ya has terminado de leer y te encuentras bastante abajo de la página.
@@ -186,7 +186,7 @@ url = "https://linkedin.com/in/rodrigo-silva-alegria"
 goToTop = true
 ```
 
-### HUGO: Archivo de Configuración Final
+## HUGO: Archivo de Configuración Final
 Con todo lo antes visto, terminarás teniendo un archivo de `hugo.toml` parecido a este:
 
 ```bash
