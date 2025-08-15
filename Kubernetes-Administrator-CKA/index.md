@@ -22,6 +22,69 @@ spec:
           image: nginx
 ```
 
+### Init Container Vs SideCar Container
+- **Init Container:** Contenedores que corren hasta completar su tarea durante la iniciación del POD
+- **SideCar Container:** Contenedor que inicia antes de la aplicación principal pero se mantienen corriendo.
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp-pod
+  labels:
+    app.kubernetes.io/name: MyApp
+spec:
+  containers:
+  - name: myapp-container
+    image: busybox:1.28
+    command: ['sh', '-c', 'echo The app is running! && sleep 3600']
+  initContainers:
+  - name: init-myservice
+    image: busybox:1.28
+    command: ['sh', '-c', "until nslookup myservice.$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace).svc.cluster.local; do echo waiting for myservice; sleep 2; done"]
+  - name: init-mydb
+    image: busybox:1.28
+    command: ['sh', '-c', "until nslookup mydb.$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace).svc.cluster.local; do echo waiting for mydb; sleep 2; done"]
+```
+**_NOTA:_** Ejemplo de `Init Container`
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp
+  labels:
+    app: myapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: myapp
+  template:
+    metadata:
+      labels:
+        app: myapp
+    spec:
+      containers:
+        - name: myapp
+          image: alpine:latest
+          command: ['sh', '-c', 'while true; do echo "logging" >> /opt/logs.txt; sleep 1; done']
+          volumeMounts:
+            - name: data
+              mountPath: /opt
+      initContainers:
+        - name: logshipper
+          image: alpine:latest
+          restartPolicy: Always
+          command: ['sh', '-c', 'tail -F /opt/logs.txt']
+          volumeMounts:
+            - name: data
+              mountPath: /opt
+      volumes:
+        - name: data
+          emptyDir: {}
+```
+**_NOTA:_** Ejemplo de `SideCar Container`
 ## DEPLOYMENT
 ### Imperativo
 `kubectl create deployment --image=nginx nginx --replicas=4 --dry-run=client -o yaml > nginx-deployment.yaml`
@@ -464,6 +527,121 @@ Mantiene las reglas de red en los nodos.
 Estas reglas permiten la comunicación hacia los PODs desde las sesiones dentro o fuera del cluster.
 - Archivo de configuración: `/var/lib/kube-proxy/config.conf`
 
+## INGRESS
+Utilizando `services` del tipo `load balancer`para más de una aplicación bajo un mismo dominio tal como:
+- `www.my-online-store.com/wear`
+- `www.my-online-store.com/watch`
+Terminaríamos teniendo más de un `load balancer`. Uno para el `deployment` de `wear` y otro para el de `watch`
+
+`Ingress` se presenta como una solución para esto.
+![](Pasted%20image%2020250814214757.png)
+Primero necesitamos un `Ingress Controller` existen alternativas pero una de las más comunes es `NGINX`
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: nginx-ingress-controller
+ spec:
+     replicas: 1
+     selector:
+         matchLabels:
+             name: nginx-ingress
+     template:
+         metadata:
+             labels:
+                 name: nginx-ingress
+         spec:
+             containers:
+                 - name: nginx-ingress-controller
+                   image: quay.io/kubernetes-ingress-controller/nginx-ingress-controller:0.21.0
+             args:
+                 - /nginx-ingress-conttroller
+                 - --configmap-$(POD_NAMESPACE)/nginx-configuration
+             env:
+                 - name: POD_NAME
+                   valueFrom:
+                       filedRef:
+                           fieldPath: metadata.name
+                 - name: POD_NAMESPACE
+                   valueFrom:
+                       fieldRef:
+                           fieldPath: metadata.namespace  
+             ports:
+                 - name: http
+                   containerPort: 80
+                 - name: https
+                   containerPort: 443
+```
+
+Vemos que tiene un `configmap` para poder pasar configuraciones desde un archivo aparte:
+
+```yaml
+kind: ConfigMap
+apiVersion: v1
+metadata:
+    name: nginx-configuration
+```
+
+Y debe tener su `service`:
+```yaml
+apiVersion: v1
+Kind: Service
+metadata:
+    name: nginx-ingress
+ spec:
+     type: NodePort
+     ports:
+         - port: 80
+           targetPort: 80
+           protocol: TCP
+           name: http
+         - port: 443
+           targetPort: 443
+           protocol: TCP
+           name: https
+     selector:
+         name: nginx-ingress
+```
+
+Y su `service Account`:
+```yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+    name: nginx-ingress-serviceaccount
+```
+
+Finalmente el `Ingress` 
+```yaml
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress-wear-watch
+  namespace: app-space
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /wear
+        pathType: Prefix
+        backend:
+          service:
+           name: wear-service
+           port: 
+            number: 8080
+      - path: /watch
+        pathType: Prefix
+        backend:
+          service:
+           name: video-service
+           port:
+            number: 8080
+```
+Existen los llamados `annotations` con los que podemos añadir configuraciones adicionales.
 ## STORAGE
 ### Volumes Y VolumeMounts
 La forma mas simple de usar volúmenes sería:
