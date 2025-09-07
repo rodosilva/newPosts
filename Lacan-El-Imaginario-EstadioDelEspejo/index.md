@@ -1,7 +1,9 @@
 +++
 date = '2025-09-07T17:53:54-05:00'
-title = 'Lacan-El-Imaginario-EstadioDelEspejo'
-+++## EL DESEO
+title = 'Lacan - El Imaginario Estadio Del Espejo'
++++
+
+## EL DESEO
 ¿Qué es el **deseo**? ¿Acaso el deseo es nuestro? O será que deseamos lo que los otros desean...
 
 Más allá de la definición, sin duda, nuestro deseo rige nuestro comportamiento. Nosotros accionamos, ejecutamos y nos embarcamos por seguir nuestros deseos.
