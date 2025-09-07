@@ -371,6 +371,85 @@ selector:
         tier.front-end 
 ```
 
+## RBAC: ROLE BASED ACCESS CONTROL
+
+### Role:
+Regula el acceso basado en roles
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+    name: developer
+    namespace: [nameSpaceName]
+rules:
+    - apiGroups: [""]
+      resources: ["pods"]
+      verbs: ["list", "get", "create", "update", "delete"]
+      resourceNames: ["blue", "orange"] #Specific Pods 
+    - apiGroups: [""]
+      resources: ["configMap"]
+      verbs: ["create"]
+```
+
+Y de forma imperativa la creación del **Role** sería:
+`kubectl create role developer --ver=list,create,delete --resource=pods`
+
+### Binding Role and User:
+Para hacer el link entre el **Role** y el **User**:
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+    name: devuser-developer-binding
+subjects:
+     - kind: User
+       name: dev-user
+       apiGroup: rbac.authorization.k8s.io
+roleRef:
+    kind: Role
+    name: developer
+    apiGroup: rbac.authorization.k8s.io
+```
+
+Y de forma imperativa sería:
+`kubectl create rolebinding dev-user-binding --role=developer --user=dev-user`
+
+### Revisar Acceso:
+Se puede probar acceso:
+`kubectl auth can-i create pods --as dev-user --namespace test`
+
+### Cluster Roles:
+En este caso los roles y los `Role Bindings` son creados dentro de `namespaces`
+![](Pasted%20image%2020250904214737.png)
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+    name: cluster-administrator
+rules:
+    - apiGroups: [""]
+      resources: ["nodes"]
+      verbs: ["list", "get", "create", "delete"]
+```
+
+### Cluster Role Binding
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind:ClusterRoleBinding
+metadata:
+    name: cluster-admin-role-binding
+subjects:
+    - kind: User
+      name: clister-admin
+      apiGroup: rbac.authorization.k8s.io
+roleRef:
+    kind: ClusterRole
+    name: cluster-administrator
+    apiGroup: rbac.authorization.k8s.io
+```
+
+
 ## COMMANDS & ARGUMENTS
 Considerando la diferencia:
 - **Command:** Es el comando per se. Ejemplo `command: ["sleep2.0"]`
@@ -527,6 +606,93 @@ Mantiene las reglas de red en los nodos.
 Estas reglas permiten la comunicación hacia los PODs desde las sesiones dentro o fuera del cluster.
 - Archivo de configuración: `/var/lib/kube-proxy/config.conf`
 
+### CNI en Kubernetes
+La manera en que se aísla las redes es mediante `Namespaces`
+Los podemos listar mediante el comando `ip netns` o ver a detalle con `ip netns exec [red] ip link`
+
+#### Introducción
+Se muestra una forma manual de establecer conexión de red entre diferentes redes virtuales:
+```bash
+# Crear un namespace
+ip netns add [red]
+# Detallarlo
+ip -n red link
+# Otra opción
+ip netns exec [red] ip link
+# Ver la tabla arp
+arp
+# Ver tabla arp para el namespace
+ip netns exec [red] arp
+# Ver tabla de enrutamiento
+route
+# Ver tabla de enrutamiento para el namespace
+ip netns exec [red] route
+```
+
+Estableciendo conexión:
+```bash
+# Crear un veth
+ip link add veth-red type veth
+# Si deseamos crear un tunel entre veth
+ip link add veth-red type veth peer name veth-blue
+# Asignamos el veth a un namespace
+ip link set veth-red netns red
+# Asignamos una IP
+ip -n red addr add 192.168.15.1 dev veth-red
+# Levantamos el link
+ip -n red link set veth-red up
+# Por si queremos borrarlo
+ip -n red link del veth-red
+# Probamos mediante ping
+ip netns exec red ping 192.168.15.2
+```
+
+Ahora toca configurar el `bridge` 
+```bash
+# Crear bridge
+ip link add [v-net-0] type bridge
+# Levantar el bridge
+ip link set dev v-net-0 up
+# Crear el peer del veth con un veth pero del Bridge
+ip link add veth-red type veth peer name veth-red-br
+# Asignarle IP al bridge
+ip addr add 192.168.15.5/24 dev v-net-0
+# Unir el veth del bridge al Bridge
+ip link set veth-red-br master v-net-0
+```
+
+![](Pasted%20image%2020250902213727.png)
+
+Para el **enrutamiento**
+```bash
+# Enrutamiento para una Red
+ip netns exec [blue] ip route add 192.168.1.0/24 via 192.168.15.5
+# Enrutamiento Default
+ip netns exec blue ip route add default via 192.168.15.5
+```
+
+![](Pasted%20image%2020250902215145.png)
+
+Finalmente el `NAT`
+```bash
+iptables -t nat -A POSTROUTING -s 192.168.15.0/24 -j MASQUERADE
+# Ingreso hacia Blue desde fuera
+iptables -t nat -A PREROUTING --dport 80 --to-destination 192.168.15.2:80 -j DNAT
+```
+
+#### Forwarding
+Es necesario que los `Nodos` re envíen los paquetes. Y eso está en:
+```bash
+# 0 es no forwarding
+cat /proc/sys/net/ipv4/ip_forward
+# 1 es forward
+echo 1 > /proc/sys/net/ipv4/ip_forward
+# Para que persista a pesar de los reinicios
+echo 'net.ipv4.ip_forward = 1' >> /etc/sysctl.conf
+echo 'net.bridge.bridge-nf-call-iptables = 1' >> /etc/sysctl.conf
+# Leer valores
+sysctl -p
+```
 ## INGRESS
 Utilizando `services` del tipo `load balancer`para más de una aplicación bajo un mismo dominio tal como:
 - `www.my-online-store.com/wear`

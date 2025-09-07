@@ -24,6 +24,12 @@ Con Vagrant, tenemos la seguridad de que cualquier cosa que se malogre, será f�
 - `vagrant snapshot push`: Añade al snapshot a la pila
 - `vagrant snapshot pop`: Toma el último elemento de la pila
 
+## Capítulo 0: Introducción
+- `Vagrant` es una herramienta que te permite el desarrollo de entornos completos.
+- Tiene un enfoque de automatización
+- Construye y administra máquinas virtuales
+- Obtén entornos desechables
+
 ## Capítulo 1: Requerimientos
 
 - VirtualBox: [Instalación](https://www.virtualbox.org/wiki/Linux_Downloads)
