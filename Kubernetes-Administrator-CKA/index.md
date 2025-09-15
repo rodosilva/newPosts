@@ -426,29 +426,49 @@ En este caso los roles y los `Role Bindings` son creados dentro de `namespaces`
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-    name: cluster-administrator
+    name: pvviewer-role
 rules:
     - apiGroups: [""]
-      resources: ["nodes"]
+      resources: ["persistentvolumes"]
       verbs: ["list", "get", "create", "delete"]
 ```
 
+Declarativo: `kubectl create clusterrole pvviewer-role --resource=persistentvolumes --verb=list`
 ### Cluster Role Binding
 ```yaml
 apiVersion: rbac.authorization.k8s.io/v1
-kind:ClusterRoleBinding
+kind: ClusterRoleBinding
 metadata:
-    name: cluster-admin-role-binding
-subjects:
-    - kind: User
-      name: clister-admin
-      apiGroup: rbac.authorization.k8s.io
+  name: pvviewer-role-binding
 roleRef:
-    kind: ClusterRole
-    name: cluster-administrator
-    apiGroup: rbac.authorization.k8s.io
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: pvviewer-role
+subjects:
+- kind: ServiceAccount
+  name: pvviewer
+  namespace: default
 ```
 
+Declarativo: `kubectl create clusterrolebinding pvviewer-role-binding --clusterrole=pvviewer-role --serviceaccount=default:pvviewer`
+## SERVICE ACCOUNT
+De forma imperativa: `kubectl create serviceaccount [name]`
+
+### Integrarlo al POD
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    run: pvviewer
+  name: pvviewer
+spec:
+  containers:
+  - image: redis
+    name: pvviewer
+  # Add service account name
+  serviceAccountName: [name]
+```
 
 ## COMMANDS & ARGUMENTS
 Considerando la diferencia:
