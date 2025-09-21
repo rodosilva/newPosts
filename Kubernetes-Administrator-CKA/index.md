@@ -371,6 +371,25 @@ selector:
         tier.front-end 
 ```
 
+## SCHEDULING
+Asignación del `POD` en el `NODO` correspondiente dependiendo de las instrucciones.
+
+### Scheduling Manual
+Con `NodeName` solo se puede asignar durante la creación:
+```yaml
+---
+apliVersion: v1
+kind: Pod
+metadata:
+    name: nginx
+ spec:
+     nodeName: node01 # <<<<<<<<<<<<<
+     containers:
+         - image: nginx
+           name: nginx
+```
+
+
 ## RBAC: ROLE BASED ACCESS CONTROL
 
 ### Role:
