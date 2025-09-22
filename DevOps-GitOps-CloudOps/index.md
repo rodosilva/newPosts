@@ -97,6 +97,7 @@ Necesita tener un buen plan de `rollback`.
 #### Rolling Deployment
 El cambio se da de forma incremental con el tiempo.
 ![](Pasted%20image%2020250921114018.png)
+
 El despliegue de la nueva versión se da gradualmente por lo que se va actualizando un server a la vez.
 Usualmente previene caídas de servicio para los usuarios. Sin embargo no permite realizar `targeted Rollouts` hacia un grupo específico de usuarios.
 
@@ -149,6 +150,294 @@ Y gracias a herramientas tales como `ArgoCD`, se consigue que `Git` sea la fuent
 Esto significa que `ArgoCD` es capaz de detectar cualquier cambio en la infraestructura (algún posible cambio manual) y si esta es diferente al repositorio de `git`, lo revierte nuevamente tal y como está definido en el repositorio. 
 
 ## CloudOps
+
+### IAM
+#### IAM Policies
+Documentos Json que pueden ser asignados a usuarios o grupos
+#### IAM Roles
+- Servicios AWS realizando acciones a tu nombre.
+- Asignar permisos a servicios AWS con `IAM roles`
+
+### EC2
+Infraestructura como servicio. 
+- EC2 maquinas virtuales
+- EBS Almacenamiento o discos virtuales
+- ELB Distribución de carga
+- ASG Escalamiento de servicios `auto-scaling group`
+
+#### EC2 Instance Store
+- Disco de alta performance. 
+- Mejor I/O, bueno para buffer, cache, etc
+#### Security Groups
+- Controlan como el tráfico es permitido hacia adentro o hacia afuera de las EC2
+- Solo tiene reglas `allow`
+
+### Almacenamiento
+#### EBS
+Disco de red que puede ser conectado y desconectado de un EC2 con facilidad.
+- EBS snapshots
+- EBS encriptación
+- Puede conectarse a solo una instancia a la vez
+
+#### EFS
+- NFS administrable que puede ser montado en varios EC2
+- Solo para Linux
+
+#### AMI
+- Imagen de Amazon.
+
+### Alta Disponibilidad Y Escalabilidad ELB & ASG
+#### ELB Elastic Load Balancing
+- Reenvío de tráfico a multiples servidores
+- Expone un solo punto de acceso (DNS)
+- SSL/TLS
+- Tipos
+	- Classic CLB
+	- Aplicación ALB (capa 7)
+	- Red NLB (Capa 4) - Menos latencia
+	- Gateway GWLB
+
+#### Auto Scaling Group
+- La carga en tus webs puede cambiar
+- Puede crear o eliminar servidores
+- Scale Out: Añade EC2
+- Scale In: Elimina EC2
+- Políticas de escalamiento: e.g Promedio de uso de CPU.
+
+### RDS
+Bases de datos relacionales
+- Postgres, MySQL, MariaDB, Oracle, SQL, Aurora
+- Auto scaling
+- RDS Read Replicas
+
+#### Aurora
+Propiedad de AWS
+- Aurora Serverless
+- Global Aurora
+
+#### Amazon RDS Proxy
+Base de datos Proxy para RDS
+- Mejora la eficiencia
+
+#### Amazon ElastiCache
+- Bases de datos de cache en memoria
+- Baja latencia, alta performance
+- Cargas de lectura intensa
+- Redis Vs Memcached
+![](Pasted%20image%2020250921174544.png)
+
+### Route 53
+Traduce nombres amigables al ojo humano en direcciones IP
+- Domain registrar: Amazon Route 53, GoDaddy, etc
+- DNS Records
+- Zone
+- Name Server: Resuelve consultas DNS
+- TLD: .com
+- SLD: amazon.com
+- CNAME Vs Alias: CNAME es Hostname que apunta a otro hostname y no pueden ser dominios raíz. Alias es hostname que apunta a algún recurso AWS.
+
+#### Políticas de Enrutamiento
+Define como Route 53 responde a las consultas DNS
+- Simple: Enruta hacia un recurso
+- Weighted: Controla el % de las solicitudes
+- Failover: Active Passive. 
+- Latency Based: Enruta hacia recursos que tengan la menor latencia
+- Geo localización: Basado en la ubicación del usuario
+- Multi_Value Answer: Enrutar a varios recursos
+- Geoproximity: Basado en la geografía de usuarios y recursos
+
+#### Health Checks
+Monitorean un endpoint
+- Protocolos: HTTP, HTTPS, TCP
+
+### Amazon S3
+Almacenamiento de objetos en buckets
+- Versioning
+- Lifecycle Rules
+#### S3 Security
+- User based: con IAM policies
+- Resource based: Bucket policies
+- Encriptación
+
+#### Storage Classes
+- Standard, Standard Infrequent Access, One zone IA, Glacier, Glacier Flexible, Glacier Deep Archive, Intelligent Tiering
+
+### AWS CloudFront
+Content Delivery Network
+- Mejora la lectura, el contenido esta en cache en el edge
+- Protección DDoS
+
+### Storage Extra
+#### Amazon FSx
+File systems de alta performance
+- FSx for Windows
+- FSx for Lustre: Para alta escala
+
+### SQS, SNS, Kinesis, Active MQ
+Aplicaciones que se comunican entre ellas
+#### Amazon SQS
+El mensaje persiste en SQS hasta que sea consumido por el consumidor (lo borra)
+- Consumidores: EC2, serverless, lambda
+- FIFO Queue
+
+#### Amazon SNS
+Un mensaje hacia varios receptores
+![](Pasted%20image%2020250921184539.png)
+
+- SNS + SQS: Fan Out
+- Amazon SNS FIFO Topic
+
+#### Kinesis
+Colecta, procesa y analiza data en tiempo real
+- Kinesis Data Firehose
+
+### Contenedores en AWS: ECS, Fargate, ECR y EKS
+
+#### Amazon ECS
+Lanza contenedores Docker en AWS
+- ECS - EC2 (Dentro de una instancia)
+![](Pasted%20image%2020250921185204.png)
+
+- ECS - Fargate: Serverless
+- ECS puede usar EFS
+
+#### ECR
+Elastic container registry
+- Sirve para almacenar imagenes Docker en AWS
+
+#### Amazon EKS
+Amazon Elastic Kubernetes Service
+- EC2 si quieres worker nodes como instancias
+- Fargate: Solución serverless
+
+### Serverless
+Solo despliegue de código
+![](Pasted%20image%2020250921190011.png)
+
+- Por qué AWS Lambda
+![](Pasted%20image%2020250921190124.png)
+
+#### API Gateway
+- Lambda + Api gateway = No hay infraestructura que manejar
+- Expone cualquier AWS PI con API Gateway
+
+#### Amazon Cognito
+Entrega a los usuarios una identidad para con nuestra web o aplicación
+![](Pasted%20image%2020250921190903.png)
+
+### Data Y Analítica
+- Amazon Athena
+- Amazon Redshift
+- Amazon OpenSearch
+- Amazon EMR
+- Amazon QuickSight
+- AWS Glue
+- AWS Lake Formation
+- Kinesis Data Analytics
+- Amazon Managed Streaming for Apache Kafka
+- Big Data Ingestion Pipeline
+
+### Machine Learning
+- Amazon Rekognition
+- Amazon Transcribe
+- Amazon Polly
+- Amazon Translate
+- Amazon Lex & Connect
+- Amazon Comprehend
+- Amazon Comprehend Medical
+- Amazon SageMaker
+- Amazon Forecast
+- Amazon Kendra
+- Amazon Personalize
+- Amazon Textract
+
+### AWS Monitoring and Audit: CloudWatch, CloudTrail & Config
+
+#### Amazon CloudWatch
+Entrega métricas
+- Metric stream
+- CloudWatch Logs
+- CloudWatch Agent y Logs Agent
+- CloudWatch Container Insights: Colecta y resume métricas y logs de contenedores
+- CloudWatch Lambda Insights: Solución para serverless
+
+#### Amazon EventBridge
+![](Pasted%20image%2020250921191837.png)
+
+#### AWS CloudTrail
+Governance y compliance y auditoria para cuentas AWS
+![](Pasted%20image%2020250921192206.png)
+
+#### AWS Config
+Ayuda a las auditorias.
+
+### IAM Advanced
+- AWS Control Tower: Multi-Account
+
+#### AWS Directory Services
+- AWS Managed Microsoft AD: Establece confianza con AD on-premise
+- AD Connector: Gateway (Proxy) que redirige a un AD on-premise
+- Simple AD: AD compatible
+
+#### IAM Identity Center - Active Directory Setup
+Conexión con un Microsoft AD manejado por AWS
+![](Pasted%20image%2020250921201040.png)
+
+### AWS Security & Encyption KMS, SSM Parameter Store, CloudHSM, Shield, WAF
+- KMS: Manejo de llaves
+- SSM Parameter Store: Manejo de Secrets
+- AWS Secret Manager: Rotación de Secrets
+- AWS Certificate Manager ACM: Manejo de certificados TLS
+- WAF: Firewall
+- AWS Shield
+- Amazon GuardDuty
+- Amazon Inspector
+- Amazon Macie
+
+### Networking VPC
+Virtual Private Cloud
+![](Pasted%20image%2020250921201837.png)
+
+#### Internet Gateway IGW
+Permite que los recursos dentro de un VPC, se conecten con el internet
+![](Pasted%20image%2020250921202200.png)
+
+#### Bastion Hosts
+Bastion está en una subnet pública que a su vez se puede conectar con las subnets privadas.
+
+#### NAT Gateway
+![](Pasted%20image%2020250921202643.png)
+
+#### Security Groups & NACLs
+Network access control list
+- Control de tráfico
+- Security Group es a nivel de instancia
+- NACL es a nivel de subnet
+
+#### VPC Peering
+Conexión privada entre VPC
+
+#### VPC Endpoints
+Te permite conectarte con un servicio AWS usando una red privada en lugar de una pública.
+![](Pasted%20image%2020250921203502.png)
+
+- Interface Endpoint
+- Gateway Endpoint
+
+#### AWS Site to Site VPN
+- AWS VPN CloudHub: Si tienes multiples conexiones VPN
+
+#### Direct Connect DX
+Conexión privada desde una red remota hacia tu VPC
+
+#### Transit Gateway
+Hub and spoke connection entre VPCs
+
+### CloudFormation
+Despliegue y manejo de infraestructura. IaC
+- Forma declarativa
+
+
 
 ## SysAdmin
 
