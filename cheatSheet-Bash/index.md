@@ -85,7 +85,7 @@ Una vez generado el patron en un formato `regex` le digo que extraiga el cuarto 
 ```bash
 if [[ -z $string ]]; then
   echo "String is empty"
-elseif [[ -n $string ]]; then
+elif [[ -n $string ]]; then
   echo "String is not empty"
 else
   echo "This never happens"
@@ -114,3 +114,125 @@ fi
 | `[[ NUM -ge NUM ]]`      | Mayor o igual         |
 | `[[ STRING =~ STRING ]]` | Regexp                |
 | `(( NUM < NUM ))`        | Condición numérica    |
+## 4. LOOP
+
+### 4.1 For
+Iterando un arreglo:
+```bash
+arreglo=(uno dos tres cuatro cinco)
+# Iterando valores
+for i in ${arreglo[@]}; do
+  echo $i
+done
+
+# Iterando índices
+for i in ${!arreglo[@]}; do
+  echo $i
+done
+```
+
+### 4.2 While
+Lectura de archivo linea a linea
+```bash
+while read -r line; do
+  echo "$line"
+done <file.txt
+```
+
+## 5. SELECT AND CASE
+Se suele utilizar para realizar menus
+
+```bash
+options=(toyota nissan honda mazda suzuki)
+
+select op in "${options[@]}"
+do
+  case $op in
+    toyota)
+      echo "You selected Toyota"
+      ;;
+    nissan)
+      echo "You selected Nissan"
+      ;;
+    honda)
+      echo "You selected Honda"
+      ;;
+    mazda)
+      echo "You selected Mazda"
+      ;;
+    suzuki)
+      echo "You selected Suzuki"
+      ;;
+    *)
+      echo "Invalid option. Please try again."
+      ;;
+  esac
+done
+```
+
+## 6. ARREGLOS
+```bash
+Fruits=('Apple' 'Banana' 'Orange')
+```
+
+| echo            | output                |
+| --------------- | --------------------- |
+| "${Fruits[0]}"  | "Apple"               |
+| "${Fruits[1]}"  | "Banana"              |
+| "${Fruits[2]}"  | "Orage"               |
+| "${Fruits[@]}"  | "Apple Banana Orange" |
+| "${Fruits[-1]}" | "Orange" #Último      |
+| "${#Fruits[@]}" | 3 #NumElementos       |
+| "${!Fruits[@]}" | "0 1 2" #Índices      |
+## 7. DICCIONARIOS
+
+```bash
+declare -A sounds
+
+sounds[dog]="bark"
+sounds[cow]="moo"
+sounds[bird]="tweet"
+sounds[wolf]="howl"
+```
+
+| echo             | output                |
+| ---------------- | --------------------- |
+| "${sounds[dog]}" | "bark"                |
+| "${sounds[@]}"   | "bark tweet moo howl" |
+| "${!sounds[@]}"  | "dog bird cow wolf"   |
+| "${#sounds[@]}"  | 4 #NumElementos       |
+
+## 8. RE-DIRECCIÓN
+
+```bash
+python hello.py > output.txt            # stdout to (file)
+python hello.py >> output.txt           # stdout to (file), append
+python hello.py 2> error.log            # stderr to (file)
+python hello.py 2>&1                    # stderr to stdout
+python hello.py 2>/dev/null             # stderr to (null)
+```
+
+## 9. VARIABLES ESPECIALES
+
+| Variable | Significado                                            |
+| -------- | ------------------------------------------------------ |
+| $?       | Estado de la última tarea ejecutada ("0" Ok "1" Error) |
+| $0       | Nombre del archivo de Script                           |
+## 10. FUNCIONES
+
+```bash
+myfunc() {
+    echo "hello $1"
+}
+
+myfunc "world"
+```
+
+El resultado diría:
+`hello world`
+
+| Elemento | Significado                                     |
+| -------- | ----------------------------------------------- |
+| $#       | Número de argumentos                            |
+| $*       | Todos los argumentos de posición                |
+| $@       | Todos los argumentos de posición con separación |
