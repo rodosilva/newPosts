@@ -120,6 +120,7 @@ Ayuda a desplegar multiples instancias de PODs
 Corre una copia de tu POD en cada nodo de tu cluster
 Con cada nodo nuevo, se añade una replica
 También asegura que una copia del POD este siempre presente en todos los nodos.
+![](Pasted%20image%2020250930200220.png)
 ### Declarativo
 ```bash
 apiVersion: apps/v1
@@ -389,6 +390,180 @@ metadata:
            name: nginx
 ```
 
+### Labels & Selectors 
+En `Deployments`,  `ReplicaSets` podemos usar `selector` para identificar objetos.
+
+```yaml
+spec:
+    replicas: 3
+    selector: # ----------> Connect replicaSet to the Pods
+        matchLabels:
+            app: App1 # <<<<<<<<
+```
+
+Considerando `PODs` con un `Label`
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+    name: simple-webapp
+    labels:
+        app: App1 # <<<<<<<<<<
+```
+
+### Taints & Toleration
+Restricciones con respecto a la forma de ubicar los `PODs` en los Nodos
+- `Taint`: Se aplica en Nodos. Rechazan PODs que no sean tolerantes a un Taint en particular
+- `Toleration`: Se aplica en PODs. EL POD puede ser colocado en un Nodo siempre que no tenga un taint.
+
+```yaml
+apiVersion:
+    kind: Pod
+metadata:
+    name: myapp-pod
+spec:
+    containers:
+        - name: nginx-container
+          image: nginx
+    tolerations:
+        - key: "app"
+          operator: "Equal"
+          value: "blue"
+          effect: "NoSchedule" | "PreferNoSchedule" | "NoExecute"
+```
+
+- `NoSchedule`: PODs no serán colocados en dicho Nodo
+- `PreferNoSchedule`: Se intenta no colocar
+- `NoExecute`: PODs no serán colocados en dicho Nodo. Y los existentes serán desalojados
+
+**Comando:** `kubectl taint nodes node1 app=blue:NoSchedule`
+
+### Node Selector
+```yaml
+apiVersion:
+kind: Pod
+metadata:
+    name: myapp-pod
+spec:
+    containers:
+        - name: data-processor
+          image: data-processor
+    nodeSelector:
+        size: Large # <<<<<<<<<<<<<<<<<<
+```
+
+**Comando:** `kubectl label nodes node-1 size=Large`
+
+### Node Affinity
+
+![](Pasted%20image%2020250930195003.png)
+
+```yaml
+apiVersion:
+kind: Pod
+metadata:
+    name: myapp-pod
+spec:
+    containers:
+        - name: data-processor
+          image: data-processor
+    affinity:
+        nodeAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                    - matchExpressions:
+                        - key: size
+                          operator: [In | NotIn | Exists]
+                          values:
+                              - Large
+                              - Medium
+```
+
+- `In`: POD será colocado en el nodo con alguno de los `values`.
+- `NotIn`: Se hará match a los nodos que no estén en `values`
+- `Exists`: Revisa si el label size existe.
+
+**Tipos:**
+- `requiredDuringSchedulingIgnoredDuringExecution`: Disponibilidad del POD
+- `preferredDuringSchedulingIgnoredDuringExecution`: Disponibilidad del POD
+- `requiredDuringSchedulingRequiredDuringExecution`: Planificación
+
+### Static PODs
+- **Kubelet:** Es el capitán del nodo. Puede manejar todo independientemente del `kube-apiserver`
+- **Path:** `--pod-manifest-path=/etc/kubernetes/manifests`
+- **Comando:** `kubectl run --restart=Never --image=busybox static-busybox --dry-run=client -o yaml --command -- sleep 1000 > /etc/kubernetes/manifests/static-busybox.yaml` (Dicho path deberá tener todos los manifiestos necesarios)
+
+### Priority Classes
+- App: 1000000000
+- System: 2000000000
+
+```yaml
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+    name: high-priority
+value: 1000000000
+description: "Priority class for mission critical pods"
+globalDefault: true
+preemptionPolicy: [ PreemptLowerPriority | never ]
+```
+
+En el POD
+```yaml
+spec:
+    containers:
+        - name: nginx
+          image: nginx
+          ports:
+              - containerPort: 8080
+    priorityClassName: high-priority
+```
+
+`PreemptLowerPriority`: Destruye PODs de menor prioridad en caso sea necesario.
+- `never`: Caso contrario usar esta.
+
+### Scheduler Profiles
+Este es el orden que toma en cuenta cuando se coloca un POD a algún nodo:
+1. Prioridad: `priorityClassName: high-priority`
+2. Filtro: Nodos que no pueden correr los requisitos son filtrados: `cpu: 10`
+3. Score: Se da preferencia a un nodo con un mayor margen de recursos.
+4. Bind: El POD se coloca en un nodo
+![](Pasted%20image%2020250930210025.png)
+
+Se puede modificar dicho comportamiento por defecto:
+```yaml
+# my-scheduler-2-config.yaml
+apiVersion: kubescheduler.config.k8s.io/v1
+kind: lubeSchedulerConfiguration
+profiles:
+    - schedulerName: my-scheduler-2
+      plugins:
+      score:
+          disabled:
+              - name: TaintToleration
+          enabled:
+              - name: MyCustomPluginA
+              - name: MyCustomPluginB
+              
+     - schedulerName: my-scheduler-3
+       plugins:
+           preScore:
+               disabled:
+                   - name: '*'
+           score:
+               disabled:
+                   - name: '*'
+                   
+      - schedulerName: my-scheduler-4  
+```
+
+### Admissions Controllers
+![](Pasted%20image%2020250930212014.png)
+
+- Ver admission Controllers: `kube-apiserver -h | grep enable-admission-plugins`
+- Ver desde `ControlPlane`: `kubectl exec kube-apiserver-controlplane -n kube-system -- kube-apiserver -h | grep enable-admission-plugins`
+- Habilitar o des habilitar:  `--enable-admission-plugins=NodeRestriction,NamespaceAutoProvision` | `--disable-admission-plugins=DefaultStorageClass `
+- Path: `/etc/kubernetes/manifests/kube-apiserver.yaml`
 
 ## RBAC: ROLE BASED ACCESS CONTROL
 
