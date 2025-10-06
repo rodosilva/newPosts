@@ -483,6 +483,91 @@ except ZeroDivisionError:
   print("Error: Division by zero is not allowed.")
 ```
 
+## GITHUB USING PYTHON
+Need to use the GitHub API
+- Install Library: `PyGithub`
+- Generate Personal Access Token
+- Use `PyGithub` to Connect
+
+Official Documentation can be found [Here](https://pygithub.readthedocs.io/en/stable/introduction.html)
+
+### Python Virtual Environment - Pre Requisite
+We will need to create a `Python venv`:
+- Installing `python venv`
+```bash
+sudo apt install python3.12-venv
+```
+- Create the virtual environment on your folder:
+```python
+python3 -m venv venv
+```
+- You can now use `pip` to install Python libraries (e.g):
+```python
+# On the directory you created the venv
+venv/bin/pip3.12 install PyGithub
+```
+- Also, you can start using your personal Python scripts:
+```python
+# On the directory you created the venv
+venv/bin/python3.12 Section15-Github/pyGithub.py
+```
+
+### Clone a GitHub Repository Using Python
+- Sub process module or use the `GitPython` library
+- **Sub process Module:** This method runs the `git` command-line through Python. You need to have `git` installed.
+- Use `subprocess.run()` to execute the `git` clone command
+```python
+import subprocess
+
+# Define the URL
+repo_url = "https://github.com/rodosilva/pythonForDevOps.git"
+
+# Define the directory to clone into
+clone_dir = "./testCloneRepo"
+
+# Run the git clone command
+subprocess.run(["git", "clone", repo_url, clone_dir])
+```
+
+- **Using GitPython Library**
+First we need to install
+```python
+venv/bin/pip3.12 install GitPython
+```
+
+```python
+import git
+
+repo_url = "https://github.com/rodosilva/pythonForDevOps.git"
+clone_dir = "/home/rodrigo/pythonForDevOps/Section15-Github/test-repo-clone"
+
+# Cloning using gitPython Library
+output = git.Repo.clone_from(repo_url, clone_dir)
+print(output)
+```
+
+## BOTO3 PYTHON MODULE
+`Boto3` is the Amazon Web Services (AWS) software Development Kit (SDK) for Python.
+It allows developers to write software that makes use of services like Amazon S3, EC2, DynamoDB, etc.
+
+**Steps**
+- Install `Boto3`
+- AWS Credentials Setup: `Boto3` uses your AWS credentials to connect to AWS.
+	- Access Key ID
+	- Secret Access Key
+	- AWS Region
+```bash
+# First we need to unstall aws-cli and then execute
+aws configure
+```
+### Install Boto3
+```python
+venv/bin/pip3.12 install boto3
+```
+
+
+
+
 
 
 
