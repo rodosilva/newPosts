@@ -78,5 +78,7 @@ deploy:
 
 ```
 
+**_Note:_** Example based on this [repo](https://gitlab.com/nanuchi/gitlab-cicd-crash-course)
+
 
 
