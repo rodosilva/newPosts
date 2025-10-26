@@ -212,4 +212,83 @@ from aws_cdk import (
 - CF intrinsic function: `Fn:ImportValue`
 ![](Pasted%20image%2020251014210350.png)
 
+## SERVERLESS REST API
 
+**Pre Requisites:**
+- We need a rest client: `REST Client` from `VS Code` (Extensions)
+
+### AWS Lambda and CDK
+There are 3 levels of difficulty we can face:
+![](Pasted%20image%2020251019101308.png)
+
+- `aws-cdk-lib.aws_lambda` module: Generic: Function
+	- `CDK` and lambda code can be written in different languages
+	- Lambda runtime contain `AWS SDK`. No need to **bundle**
+	- **Other dependencies**: Building required. `CDK` uses `Docker`
+- **TypeScript:** `NodeJsFunction`
+	- Requires `esbuild` packages. If not present it uses `Docker`
+- **Python:** `aws_lambda_python_alpha` - If other dependencies are required
+	- Still experimental
+- **Other languages:** `Code.fromAsset`
+
+### AWS Lambda Architecture: Multiple, Monolithic
+**Multiple**
+![](Pasted%20image%2020251019103118.png)
+
+**Monolithic**
+![](Pasted%20image%2020251019103051.png)
+
+### The AWS SDK
+- Interacts with AWS
+	- Console: Using UI
+	- CLI: Using commands `aws s3 ls`
+	- Code: Using AWS SDKs `JavaScript, Python, etc`
+		- Code can be run from EC2 instances
+		- Lambda
+		- Other AWS services
+		- Our computer:
+			- `JavaScript:` `aws-sdk-js-v3`
+			- `Python:` `boto3`
+
+### The AWS SDK - DynamoDB
+- Write queries for `DynamoDB` (putltem, getltem)
+- Run queries from AWS lambda
+- Lambda needs to have access to the table
+	- table name
+	- IAM role for different operations
+- Required:
+	- `DynamoDB client` - Outside the Lambda body
+- Use client to make request
+
+```python
+# Use it outside the Handler
+table_name = os.environ.get("TABLE_NAME")
+dynamodb = boto3.resource("dynamodb")
+table = dynamodb.Table(table_name)
+```
+
+Documentation: [aws dynamodb](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_dynamodb.TableV2.html)
+We need to install:
+```bash
+pip install boto3
+```
+
+### TESTING REST CLIENT
+We can use that extension:
+```
+# requests.http
+# We get the url from the Deploy result during Lambda creation
+
+@url = https://covr3k2a3h.execute-api.eu-west-1.amazonaws.com/prod
+
+GET {{url}}/empl?id=kjasdnchfg
+
+POST {{url}}/empl
+content-type: application/json
+
+{
+  "name": "John",
+  "possition": "engineer"
+}
+#Output: It will return the ID of the Item
+```
