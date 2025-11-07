@@ -908,3 +908,450 @@ resource "aws_instance" "webserver" {
 ```
 
 ### Builtin Functions
+- **file( ):** Read data from a `file`
+```yaml
+resource "aws_iam_policy" "adminUser" {
+  name = "AdminUsers"
+  policy = file("admin-policy.json")
+}
+```
+
+- **length( ):** Get the number of elements
+```yaml
+resource "local_file" "pet" {
+  filename = var.filename
+  count = length(var.filename)
+}
+```
+
+- **toset( ):** Transform a list into a set
+```yaml
+resource "local_file" "pet" {
+  filename = var.filename
+  for_each = toset(var.region)
+}
+
+variable region {
+  type = list
+  default = ["us-east-1", "us-east-1", "ca-central-1"]
+  description = "A list of AWS Regions"
+}
+```
+
+**Interactive console:** `terraform console`
+Here we can test the build-in functions
+```bash
+$ terraform console
+> file("root/terraform-projects/main.tf")
+> length(var.region)
+> toset(var.region)
+```
+
+#### Numeric Functions
+```bash
+$ terraform console
+> max (-1, 2, -10, 200, -250)
+> min (-1, 2, -10, 200, -250)
+> max(var.num...) # Using the expansion symbol
+250
+> ceil(10.1) # Output: 11
+> ceil(10.9)
+> floor(10.1)
+```
+
+#### String Functions
+```bash
+$ terraform console
+> split(",", "ami-xyz,AMI-ABC,ami-efg")
+# output: [ "ami-xyz", "AMI-ABC","ami-efg" ]
+> split(",", var.ami)
+# output: [ "ami-xyz", "AMI-ABC","ami-efg" ]
+> lower(var.ami)
+> upper(var.ami)
+> title(var.ami) # Capital letter like a title
+> substr(var.ami, 0, 7) #First and length
+# output: ami-xyz
+> join(",", var.ami) # List into string
+> 
+ 
+```
+
+Considering:
+```yaml
+variable "ami" {
+  type = string
+  default = "ami-xyz,AMI-ABC,ami-efg" # String
+  # default = ["ami-xyz", "AMI-ABC", "ami-efg"]
+  description = "A string containing ami ids"
+}
+```
+
+#### Collection Functions
+```bash
+$ terraform console
+> length(var.ami)
+> index(var.ami, "AMI-ABC")
+# output: 1 COnsidering that 0 is the first one
+> element (var.ami,2) # At index 2
+# output: ami-efg
+> contains(var.ami, "AMI-ABC")
+# output: true because it does exist
+```
+
+#### Map Functions
+```yaml
+variable "ami" {
+  type = map
+  default = { "us-east-1" = "ami-xyz", 
+  "ca-central-1" = "ami-efg", 
+  "ap-south-1" = "ami-ABC" }
+  }
+  description = "A map of AMI ID's for specific regions"
+}
+```
+
+```bash
+$ terraform console
+> keys(var.ami) # Convert to list with just Keys
+# output: ["ap-south-1", "ca-central-1", "us-east-1"]
+> values(varma.ami)
+# output: ["ami-ABC", "ami-efg", "ami-xyz"]
+> lookup(var.ami, "ca-central-1") # Look for the value with the Key provided
+# output: ami-efg
+> lookup(var.ami, "us-west-2", "ami-pqr") # Use default: "ami-pqr" in case it is not found
+# output: ami-pqr
+```
+
+### Operators & Conditional Expressions
+```bash
+$ terraform console
+> 1 + 2
+3
+> 8 == 8
+true
+> 8 > 7 && 8 < 10 # And symbol
+true
+8 > 9 || 8 < 10
+true
+> var.special
+true
+> ! var.special
+false
+```
+
+```yaml
+variable special {
+  type = bool
+  default = true
+  description = "Set to true to use special characters"
+}
+```
+
+What if we want to accept a value of a password with at least 8 characters long
+```yaml
+resource "random_password" "password-generator" {
+  length = var.length < 8 ? 8 : var.length
+}
+output password {
+  value = random_password.password-generator.result
+}
+```
+
+```yaml
+variable length {
+  type = number
+  desciption = "The length of the password"
+}
+```
+
+We need to use `condition ? true_val : false_val`
+I the case of `length = var.length < 8 ? 8 : var.length`
+- If `var.length < 8`
+- Then use `8` in case true
+- Else, use `var.length` in case is false
+
+So if we use `terraform apply -var.length=5` Terraform will still use `length = 8`
+
+### Local Values
+If we have a repetitive values that we need to use more than one time.
+We can use `locals`
+
+```yaml
+resource "aws_instance" "web" {
+  ami = "ami-095"
+  instance_type = "t2.medium"
+  tags = local.common_tags
+}
+
+resource "aws_instance" "db" {
+  ami = "ami-0564"
+  instance_type = "m5.large"
+  tags = local.common_tags
+}
+
+locals {
+  common_tags = {
+    Department = "finance"
+    Project = "cerberus"
+  }
+}
+```
+
+```yaml
+resource "aws_s3_bucket" "finance_bucket" {
+  acl = "private"
+  bucket = local.bucket-prefix
+}
+
+resource "random_string" "random-suffix" {
+  length = 6
+  special = false
+  upper = false
+}
+
+variable "project" {
+  default = "cerberus"
+}
+
+locals {
+  bucket-prefix = "${var.project}-${random_string.random-suffix.id}-bucket"
+}
+```
+
+### Dynamic Blocks and Splat Expressions
+
+Considering that we need to build this:
+![](Pasted%20image%2020251101191805.png)
+
+```yaml
+resource "aws_vpc" "backend-vpc" {
+  cidr_block = "1.0.0.0/16"
+  tags = {
+    Name = "backend-vpc"
+  }
+}
+
+resource "aws_subnet" "private-subnet" {
+  vpc_id = aws_vpc.backend-vpc.id
+  cidr_block = "10.0.2.0/24"
+  tags = {
+    Name = "private-subnet"
+  }
+}
+
+resource "aws_security_group" "backend-sg" {
+  name = "backend-sg"
+  vpc_id = aws_vpc.backend-vpc.id
+  
+  ingress {
+    from_port = 22
+    to_port = 22
+    protocol = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  ingress {
+    from_port = 8080
+    to_port = 8080
+    protocol = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+```
+
+To avoid the numerous `ingress` inputs, we can use `Dynamic Blocks`
+Since we want to replace the **nested block** `ingress` we need to add a `dynamic "ingress"` like that:
+
+```yaml
+variable "ingress_ports" {
+  type = list
+  default = [22, 8080]
+}
+
+output "to_ports" {
+  value = aws_secuirty_group.backend-sg.ingress[*].to_port
+}
+```
+
+To iterate trough all the items on the list we can use `aws_secuirty_group.backend-sg.ingress[*]` the result of the output will be:
+```bash
+$ terraform output
+to_port = [22, 8080]
+```
+
+```yaml
+resource "aws_security_group" "backend-sg" {
+  name = "backend-sg"
+  vpc_id = aws_vpc.backend-vpc.id
+  
+  dynamic "ingress" {
+    iterator = port # We can also use this insteado of ingress.value
+    for_each = var.ingress_ports
+    content {
+      # from_port = ingress.value # Refers to the dynamic name
+      from_port = port.value # Refers to the iterator name
+      # to_port = ingress.value
+      to_port = port.value
+      protocol = "tcp"
+      cidr_blocks = ["0.0.0.0/0"]
+    }
+  }
+}
+```
+
+## TERRAFORM MODULE
+Any directory containing `Terraform` configuration files is a module
+- **Root Module:** Would be the directory where we can run `Terraform` commands
+
+```bash
+ls -la /root/terraform-projets
+aws-instance
+development
+```
+
+We can use code from other modules like this:
+Considering `/root/terraform-projects/development`
+
+```yaml
+# main.tf
+module "dev-wevserver" {
+  source = "../aws-instance"
+  # source = "/root/terraform-projects/aws-instance"
+}
+```
+
+In this situation the naming would change. From the perspective of being inside `development`
+- The **root module** would be `development`
+- The **child module** would be `aws-instance`
+
+**Terraform Registry:** [submodules](https://registry.terraform.io/modules/terraform-aws-modules/security-group/aws/latest/submodules/ssh)
+
+```yaml
+module "security-group_ssh" {
+  source  = "terraform-aws-modules/security-group/aws//modules/ssh"
+  version = "5.3.1"
+  # insert the 2 required variables here
+  vpc_id = "vpc-7df"
+  ingress_cidr_blocks = ["10.10.0.0/16"]
+  name = "ssh-access"
+}
+```
+
+- Simpler configuration files
+- Lower risk
+- Re-usability
+
+### Creating And Using a Module
+Reusable `Terraform Module`
+
+- **Path:** `/root/terraform-projects/modules/payroll-app`
+Where we plan to put all our reusable modules
+
+```yaml
+# app_server.tf
+resource "aws_instance" "app_server" {
+  ami = var.ami
+  instance_type = "t2.medium"
+  tags = {
+    Name = "${var.app_region}-app-server"
+  }
+  depends_on = [ aws_dynamodb_table.payroll_db, aws_s3_bucket.payroll_data ]
+}
+```
+
+```yaml
+# s3_bucket.tf
+resource "aws_s3_bucket" "payroll_data" {
+  bucket = "${var.app_region}-${var.bucket}"
+}
+```
+
+```yaml
+# dynamodb_table.tf (Fixed values)
+resource "aws_dynamodb_table" "payroll_db" {
+  name = "user_data"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key = "EmployeeID"
+  
+  attribute {
+    name = "EmployeeID"
+    type = "N"
+  }
+}
+```
+
+```yaml
+variable "app_region" {
+  type = string
+}
+variable "bucket" {
+  default = "flexit-payroll-alpha-22001c"
+}
+variable "ami" {
+  type = string
+}
+```
+
+Now, on this other **path** `/root/terraform-projects/us-payroll-app`
+```yaml
+module "us_payroll" {
+source = "../modules/payroll-app"
+app_region = "us-east-1"
+ami = "ami-24e1"
+}
+```
+
+In this case we can optionally provide a `bucket variable`. If not, it will use the default one `default = "flexit-payroll-alpha-22001c"`
+
+We do not want to change `instance_type = "t2.medium"` that is why it is hard coded.
+
+Finally we go into a new **path** `/root/terraform-projects/uk-payroll-app`
+```yaml
+module "uk_payroll" {
+source = "../modules/payroll-app"
+app_region = "eu-east-1"
+ami = "ami-35e1"
+}
+```
+
+**_Note:_** Complete address example `module.us_payroll.aws_dynamodb_table.payroll_db`
+
+- Simpler configurations files
+- Lower risk
+- Re Usability
+- Standard configuration
+
+## TERRAFORM CLOUD
+Software as a Service
+- Shared State
+- UI Interface
+- Secret Management
+- Access Controls
+- Private Registry
+- Policy Controls
+
+### Terraform Plans
+- Free Plan
+- Standard Edition
+- Plus Edition
+- Enterprise Edition
+
+![](Pasted%20image%2020251102185212.png)
+
+### Terraform Cloud Demo
+
+**Steps:**
+- Create `Terraform` Organization
+- Create a new `Workspace` and connect it to a version control (e.g `GitHub`)
+- `Runs` Where you can see the execution plans
+- `Variables` Where you need to add the variables
+- Finally `Start New Plan`
+- To delete: `Settings -> Destruction`
+- Any changes made on the repository will be executed on the `Terraform Cloud`
+- `Team` Default name is `owners`
+- `Registry` we can create our own Providers and Modules.
+
+**Settings: Policy Sets**
+Groups of sentinel policies which may be enforced on workspace.
+(E.g white list to only allow `t2.micro`)
+
+

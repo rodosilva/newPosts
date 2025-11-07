@@ -139,3 +139,40 @@ kube-system         Active   10h
 - If we change the `repo` and since we've applied `auto-sync` we will see the changes on the `kubernetes`
 
 ## GITOPS PATTERNS
+### GitOps Reconciler Types: In-Cluster Vs External
+**Ib-Cluster:** Enhanced security and simplicity. Do not expose secrets.
+**External:** Outside the cluster
+
+### Push Vs Pull Based Deployment
+![](Pasted%20image%2020251028203133.png)
+
+### ConfigMap:  ArgoCD Pull Based Reconciler
+We can edit the `configmap` of `ArgoCD` with the command:
+`kubectl -n argocd edit configmap argocd-cm` and add:
+
+```yaml
+apiVersion: v1
+data:
+  timeout.reconciliation: 10s # <-------- This line
+  [...]
+```
+
+But also a restart is needed:
+`kubectl rollout restart sts argocd-application-controller -n argocd`
+
+### ArgoCD Event Driven Reconciler (Webhook)
+Base on this [Documentation](https://argo-cd.readthedocs.io/en/stable/operator-manual/webhook/)
+For the purpose of this lecture, we will use insecure mode:
+`kubectl edit configmap argocd-cmd-params-cm -n argocd`
+
+And add a line
+```yaml
+[...]
+data:
+  server.insecure: "true"
+```
+
+and restart `kubectl -n argocd rollout restart deployment argocd-server`
+
+After that the `webhook` needs to be configured on the UI of the Github. With that we can have automatic sync with any `push`.
+

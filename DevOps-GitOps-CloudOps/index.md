@@ -395,6 +395,8 @@ Conexión con un Microsoft AD manejado por AWS
 - Amazon Macie
 
 ### Networking VPC
+Las `VPC` son regionales y son recursos aislados.
+Tienen sus rangos de IPs `CIDR`
 Virtual Private Cloud
 ![](Pasted%20image%2020250921201837.png)
 
@@ -411,8 +413,8 @@ Bastion está en una subnet pública que a su vez se puede conectar con las subn
 #### Security Groups & NACLs
 Network access control list
 - Control de tráfico
-- Security Group es a nivel de instancia
-- NACL es a nivel de subnet
+- Security Group es a nivel de instancia o recursos. Solo permite no se puede denegar. Tiene reglas de entrada y de salida. **Statefull** Si entra, sale.
+- `NACL` es a nivel de `subnet`. Reglas permitir y denegar. Origen y destino. **Stateless**: SI entra, puede no salir.
 
 #### VPC Peering
 Conexión privada entre VPC
@@ -421,8 +423,9 @@ Conexión privada entre VPC
 Te permite conectarte con un servicio AWS usando una red privada en lugar de una pública.
 ![](Pasted%20image%2020250921203502.png)
 
-- Interface Endpoint
-- Gateway Endpoint
+- **Interface Endpoint**
+- **Gateway Endpoint**
+**_Note:_** We can use the [AWS Policy Generator](https://awspolicygen.s3.amazonaws.com/policygen.html) to create a `JSON` policy.
 
 #### AWS Site to Site VPN
 - AWS VPN CloudHub: Si tienes multiples conexiones VPN
