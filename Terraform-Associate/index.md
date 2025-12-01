@@ -51,8 +51,10 @@ resource "local_file" "pet" {
 
 - `terraform init`: Making use of the local provider. Download plugins.
 - `terraform plan`: Created to review
+- `terraform -out=abc`: Created to review and saved in `abc` file
 - `terraform apply`: Proceed of the creation
-- `terraform show`: Details of the resources we've just created
+- `terraform apply -auto-approve`: Proceed of the creation and auto approve
+- `terraform show`: Details of the resources we've just created. Command is used to inspect the current state file in Terraform
 - `terraform output`: See all the outputs
 
 `Providers - Resources - Arguments`
@@ -68,7 +70,8 @@ resource "local_file" "pet" {
 
 - `terraform plan`
 - `terraform apply`
-- `terraform destroy`
+- `terraform destroy` or `terraform destroy - target=azurerm_resource_group.production`
+- `terraform destroy -auto-approve`
 - `terraform version`: See providers versions
 
 | File Name      | Purpose                                                |
@@ -470,6 +473,57 @@ What if we want to only change a specific thing:
 - `terraform apply -target random_string.server-suffix`
 Changes will only be applied on the resource named: `random_string.server-suffix`
 
+### Resource Renaming (Move Block)
+Considering:
+```yaml
+resource "aws_instance" "a" {
+  count = 2
+
+  # (resource-type-specific configuration)
+}
+```
+
+If you later choose a different name for this `resource`, then you can change the name label in the `resource block` and record the old name inside a moved block:
+
+```yaml
+resource "aws_instance" "b" {
+  count = 2
+
+  # (resource-type-specific configuration)
+}
+
+moved {
+  from = aws_instance.a
+  to   = aws_instance.b
+}
+```
+
+Before creating a new plan for `aws_instance.b`, Terraform first checks whether there is an existing object for `aws_instance.a` recorded in the state. If there is an existing object, Terraform renames that object to `aws_instance.b` and then proceeds with creating a plan.
+
+### Import Block
+The `import` block imports existing infrastructure resources into Terraform. You can add an `import` block to any Terraform configuration file, but we recommend either creating an `imports.tf`
+```yaml
+import {
+  to = TYPE.LABEL
+  id = "<RESOURCE-ID>"
+}
+
+resource "<TYPE>" "<LABEL>" {
+  # 
+}
+```
+
+- The `to` argument specifies the instance address to import the resource into.
+- The `id` argument specifies the cloud provider's ID for the resource you want to import.
+- The `identity` argument specifies a resource identity object that uniquely identifies a resource.
+```yaml
+import {
+  identity = {
+    <KEY> = <VALUE>
+  }
+}
+```
+
 ### Data Sources
 Documentation: [Here](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/key_pair)
 Cases where resources already exists.
@@ -497,7 +551,6 @@ data "aws_key_pair" "cerberus-key" {
 }
 ```
 
-
 | Resources                                    | Data Source                  |
 | -------------------------------------------- | ---------------------------- |
 | Creates, Updates, Destroys<br>Infrastructure | Only Reads<br>Infrastructure |
@@ -508,6 +561,8 @@ When a resource is created after a `terraform apply` command. A state file is cr
 It is a `JSON` data structure. Every little detail is contained. It is a source of truth.
 
 After a `terraform plan` the `terraform.tfstate` is refreshed. This can be bypassed by using `terraform apply -refresh=false`
+
+The state file contains information about the resources managed by Terraform, not the variables used in the configuration. Therefore, the variable name cannot be found in the state file for easy searching
 
 Sensitive Data is contained in the `terraform.tfstate` so it should not be included on Version Control such as `GitHub`
 
@@ -538,6 +593,7 @@ terraform {
 ```
 
 But we need to initialize again with `terraform init`
+`terraform init -migrate-state`
 
 ### Differentiate Remote State Backends in Terraform
 A `State file`:
@@ -549,6 +605,11 @@ A `State file`:
 - Team collaboration
 - Security
 - Realiability
+
+Running `terraform init -migrate-state` is the correct command to migrate the state file to the new Amazon S3 remote backend. This command initializes the backend configuration and migrates the existing state to the specified backend.
+
+**Flags**
+- `-backend-config=PATH`: Flag to specify a separate config file enables users to store sensitive information in a dedicated file that can be securely managed.
 
 **Types:**
 - `S3 backend`
@@ -581,11 +642,17 @@ to the latest acceptable version
 ### Terraform Commands:
 - `terraform validate`: Validates the code.
 - `terraform fmt`: Scans the code and changes it to a canonical format
+- `terraform fmt -recursive`: Same but recursive
 - `terraform show`: Show the current state of the configuration file as seen by `Terraform` also can be used like `terraform show -json`
 - `terraform providers`: Shows the providers
 - `terraform output`: Print out all the output variables. Can also `terraform output pet-name`
 - `terraform apply -refresh-only`: Refresh the state. Sync `Terraform` with the real word
+- `terraform apply -replace=aws_instance.web`: To mark the virtual machine for replacement
+- `terraform apply -destroy`: Another way for "destroy"
 - `terraform graph`: Creates visual representation. Need to use a a software to view it.  `terraform graph -type=plan | dot -Tpng >graph.png`
+- `terraform get`: Download modules from the module registry or a version control system
+- `terraform force-unlock`: command to remove the lock on the state for the current configuration
+- `terraform login`: Log in. Obtain and save credentials for the remote backend
 
 **State Command**
 - `terraform state show aws_s3_bucket.finance` (Example)
@@ -677,6 +744,8 @@ With that information we can complete the resource block manually.
 The imported information is also present in `terraform.tfstate` so we can inspect it.
 
 Since we are importing and incorporating the configuration on the resource block. Once we execute `terraform plan` we should not see any change to be made.
+
+When importing a resource using `terraform import`, you need to provide both the resource address (e.g., `aws_instance.web`) and the resource ID (e.g., `i-abdcef12345`) to uniquely identify the resource being imported. This information is crucial for Terraform to manage the imported resource correctly.
 
 ### Terraform Workspaces
 We can use the same configuration directory to create multiple infrastructure environments.
@@ -805,6 +874,17 @@ variable "webservers" {
 }
 ```
 
+**Another example**
+```yaml
+resource "aws_vpc" "example" {
+  # One VPC for each element of var.vpcs
+  for_each = var.vpcs
+
+  # each.value here is a value from var.vpcs
+  cidr_block = each.value.cidr_block
+}
+```
+
 Now resources are create as a `map` of resources rather than a `list`
 ```bash
 $ terraform state list
@@ -815,6 +895,8 @@ aws_instance.web["web3"]
 
 Now when we remove an item from the variable `default = ["web2", "web3"]`
 Only that corresponding resource will be removed.
+
+Since for_each creates resources as a map, each is referenced using its key instead of an index. To get the ID of a specific one, use: `aws_instance.web["web1"].id`
 
 ### Terraform Provisioners
 Provisioners provide a way to carry out tasks such as commands or scripts on remote resources.
@@ -1326,7 +1408,7 @@ Software as a Service
 - UI Interface
 - Secret Management
 - Access Controls
-- Private Registry
+- Private Registry: Allows organizations to host their own `Terraform` modules internally
 - Policy Controls
 
 ### Terraform Plans
@@ -1353,5 +1435,6 @@ Software as a Service
 **Settings: Policy Sets**
 Groups of sentinel policies which may be enforced on workspace.
 (E.g white list to only allow `t2.micro`)
+Sentinel policies are enforced after the plan, run tasks, and cost estimation phases but before the apply phase in HCP Terraform.
 
 
