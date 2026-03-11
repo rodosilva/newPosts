@@ -80,14 +80,14 @@ Con el `p` le digo que haga un loop pero con un formato parecido al de `sed` y c
 
 Una vez generado el patron en un formato `regex` le digo que extraiga el cuarto `4` basándose en ese mismo patrón.
 
-- ### Comando: comm
+### - Comando: comm
 **Compara archivos**
 ```bash
 comm -12 file1 file2 # Print only lines present in both file1 and file2
 comm -3 file1 file2  # Print lines in file1 not in file2, and vice versa
 ```
 
-- ### Comando: tr
+### - Comando: tr
 **Transforma caracteres**
 ```bash
 cat test.txt | tr [:lower:] [:upper:]
@@ -96,6 +96,16 @@ cat test.txt | tr [:lower:] [:upper:]
 ```bash
 tr '[:lower:]' '[:upper:]' < test.txt > test-upper.txt
 ```
+
+### - Comando: tee
+**Generará el resultado en el terminal y lo guardará en un archivo**
+```bash
+# Se muestra el stdout y se guarda en el archivo prueba.txt (sobre escribir)
+ls | tee prueba.txt
+# Se muestra el stdout y se guarda en el archivo prueba.txt (Añadir)
+ls | tee -a prueba.txt
+```
+
 ## 3. CONDICIONALES
 ### 3.1 Forma Básica
 ```bash
