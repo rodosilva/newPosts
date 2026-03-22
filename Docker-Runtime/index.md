@@ -176,8 +176,270 @@ docker run -it --rm -v vol-test:/root/test busybox
 
 Para eliminar el volumen:
 ```bash
-docker volume rm myvol2
+docker volume rm vol-test
+```
+
+También podemos tener un `volume-subpath`. Eso quiere decir que el volumen tendrá diferentes directorios de forma separada.
+```bash
+# Primero creamos el subpath en este caso llamado subdirectory1
+docker run -it --rm --mount type=volume,src=vol-test,dst=/directory1 busybox mkdir -p /directory1/subdirectory1
+
+# Lo podremos ver así
+sudo ls -la /var/lib/docker/volumes/vol-test/_data
+drwxr-xr-x 5 root root 4096 Mar 11 19:47 .
+drwx-----x 3 root root 4096 Mar 10 20:24 ..
+drwxr-xr-x 2 root root 4096 Mar 11 19:47 subdirectory1
+
+# Finalmente podemos montar solo ese subpath recien creado
+docker run -it --rm --mount type=volume,src=vol-test,dst=/mount,volume-subpath=subdirectory1 busybox
 ```
 
 ***Documentación Oficial:*** [volumes](https://docs.docker.com/engine/storage/volumes/)
 
+#### Bind Mounts
+Cuando usamos `Bind Mounts` un archivo o directorio es montado desde la máquina anfitrión hacia el contenedor.
+
+Cuando usar:
+- Compartir código
+- Cuando deseas que archivos del contenedor persistan en la máquina anfitrión
+- Compartir archivos de configuración
+
+```bash
+# Método 1
+docker run -it --rm --mount type=bind,src=./quickScripts,dst=/scripts busybox
+# Método 2 (En Este caso Docker puede llegar a crear un directorio en la máquina local)
+docker run -it --rm -v ./noExiste:/scripts busybox
+```
+
+***Documentación Oficial:*** [bind-mounts](https://docs.docker.com/engine/storage/bind-mounts/)
+### 4. Redes y Conectividad
+Los contenedores vienen con la red habilitada por defecto, por lo que pueden hacer conexiones externas con normalidad.
+
+Cuando arrancamos un contenedor, estará conectado a la `default bridge`. Esto a modo de "masquerading", lo que significa que, si la máquina anfitrión tiene salida a internet, no es necesaria ninguna configuración adicional para que el contenedor también tenga. 
+
+```bash
+docker run --rm -ti busybox ping -c1 docker.com
+```
+
+Solo para adicionar, Docker crea reglas `iptable` en la máquina anfitrión de manera automática. Esto para garantizar el buen funcionamiento del `bridge network`
+
+```bash
+sudo iptables -L
+```
+#### Mapeo de Puertos
+Por defecto, Docker bloquea el acceso a puertos que no hayan sido publicados.
+
+Los puerto publicados del contenedor son mapeados hacia la IP de la máquina anfitrión, para esto Docker maneja las reglas del firewall para realizar NAT "Network Address Translation", PAT "Port Address Translation" y "masquerading"
+
+```bash
+docker container run --publish 8080:80 nginx:alpine
+```
+
+#### Redes Bridge
+Docker automáticamente selecciona la subnet del `default address pools`. Dichos pools pueden ser configurados en `/etc/docker/daemon.json`. 
+
+Por defecto son:
+
+```json
+{
+  "default-address-pools": [
+    {"base":"172.17.0.0/16","size":16},
+    {"base":"172.18.0.0/16","size":16},
+    {"base":"172.19.0.0/16","size":16},
+    {"base":"172.20.0.0/14","size":16},
+    {"base":"172.24.0.0/14","size":16},
+    {"base":"172.28.0.0/14","size":16},
+    {"base":"192.168.0.0/16","size":20}
+  ]
+}
+```
+
+Si bien en la mayoría de casos usaremos la red por defecto, podemos crear nuestra propia:
+```bash
+# Crear
+docker network create -d bridge net-test
+# Listar
+docker network ls
+```
+
+Y así crear un par de contenedores dentro de la red `net-test` recién creada
+```bash
+# Contenedor 1
+docker run --rm -ti --name contenedor1 --network net-test busybox
+# Contenedor 2
+docker run --rm -ti --name contenedor2 --network net-test busybox
+```
+
+### 5. Contenedores
+#### Arranque automático
+Podemos usar la `Restart Policy` en un contenedor simplemente añadiendo `--restart` al momento de usar el comando `docker run`:
+
+| Flag                       | Descripción                                                                                                           |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `No`                       | Por defecto. No se reinicia el contenedor                                                                             |
+| `on-failure[:max-retries]` | En caso de un `non-Zero exit code` El contenedor se reinicia<br>También se puede añadir el número límite de intentos. |
+| `always`                   | Siempre                                                                                                               |
+| `unless-stopped`           | Siempre excepto cuando se detiene manualmente                                                                         |
+```bash
+docker container run --publish 8080:80 --restart unless-stopped nginx:alpine
+```
+
+### 6. Imágenes
+#### Pull y Push
+Cuando usamos por ejemplo `docker run -it --rm busybox`, y si es que no tenemos la imagen `busybox` ya alojada en nuestra máquina, lo que ocurre es que Docker realiza una descarga de la imagen.
+```bash
+docker images
+REPOSITORY   TAG       IMAGE ID       CREATED         SIZE
+busybox      latest    af3f0f48a24e   17 months ago   4.43MB
+```
+
+Pero, ¿De donde descarga la imagen?
+Por defecto, Docker jala las imágenes de [Docker Hub](https://hub.docker.com/) (Siempre y cuando la imagen sea pública)
+
+Por ejemplo la imagen que hemos venido usando: `busybox` se encuentra [aquí](https://hub.docker.com/_/busybox)
+
+Y si quisiéramos simplemente descargar la imagen el comando sería:
+```bash
+docker pull busybox
+```
+
+Por el contrario, nosotros también podemos hacerle `push` a nuestras imágenes.
+No obstante, para esto necesitaremos tener una cuenta activa en [Docker Hub](https://hub.docker.com/)
+
+Ya cuando tengamos la cuenta, deberemos hacer `docker login`. Las credenciales de autenticación se almacenan en `$HOME/.docker/config.json`
+
+#### Tags y Versionado
+Antes de poder hacer `docker push` o `docker image push`, necesitamos tener un `tag` válido.
+
+Para ello deberemos seguir ciertos componentes:
+`[HOST[:PORT]/]NAMESPACE/REPOSITORY[:TAG]`
+
+- `HOST:PORT`: Aquí se especifica la ubicación del `registry`. Por defecto es `docker.io`. Así como el puerto
+- `NAMESPACE/REPOSITORY`: El `NAMESPACE` representa al usuario u organización. El `REPOSITORY` es necesario para identificar a la imagen.
+- `TAG`: Un identificador opcional para identificar la versión o variante de la imagen.
+
+```bash
+# Tag a la imagen af3f0f48a24e
+docker tag af3f0f48a24e rodosilva/busybox:1.0
+```
+
+Ahora sí podemos empezar a subir imágenes al `Docker Registry`
+```bash
+docker push rodosilva/busybox:1.0
+```
+
+En dicho ejemplo estaríamos subiendo la imagen al registry `docker.io` dentro del `NAMESPACE` o usuario `rodosilva` con un nombre de repositorio `busybox` en su versión `1.0`
+
+![](Pasted%20image%2020260315204043.png)
+
+#### Docker Hub y registries privados
+Ahora podemos explorar un poco nuestra cuenta y nuestros repositorios. En mi caso son:
+[Repositorios](https://hub.docker.com/repositories/rodosilva)
+
+Al ser una cuenta gratuita, podemos subir imágenes publicas. Es decir de acceso para cualquier usuario. No obstante podemos subir un repositorio privado.
+![](Pasted%20image%2020260315205627.png)
+[Default Privacy](https://hub.docker.com/repository-settings/default-privacy)
+
+Como ya se ha mencionado antes, si bien el `registry` por defecto es `docker.io`, es posible usar `private registries`.
+
+Para ello durante el `tag` deberemos añadir más detalles:
+```bash
+docker tag 0e5574283393 myregistryhost:5000/fedora/httpd:version1.0
+```
+
+Donde `myregistryhost` es el nombre del registry privado y `5000` es el puerto que se está usando para recibir las imágenes.
+
+### 7. Dockerfile
+
+#### Instrucciones
+Docker builds images by reading the instructions from a Dockerfile. A Dockerfile is a text file containing instructions for building your source code. The Dockerfile instruction syntax is defined by the specification reference in the [Dockerfile reference](https://docs.docker.com/reference/dockerfile/).
+
+Here are the most common types of instructions:
+
+Docker crea las imágenes a partir de la lectura de instrucciones de un `Dockerfile`. Que es básicamente un documento de texto. La sintaxis está definida por esta [referencia](https://docs.docker.com/reference/dockerfile/)
+
+Entre los más comunes encontramos:
+
+| Instrucción                                                                                       | Descripción                     |
+| ------------------------------------------------------------------------------------------------- | ------------------------------- |
+| `FROM <image>`                                                                                    | Define la base de la imag       |
+| `RUN <command>`                                                                                   | Ejecuta comandos en una nueva c |
+| `WORKDIR <directory>`                                                                             | Define el directorio de trabajo |
+| `COPY <src> <dest>`                                                                               | Copia archivos o direct         |
+| `CMD <command>`   Define el programa por defecto que correrá una vez iniciado el contenedor ciado |                                 |
+Ejemplo:
+```dockerfile
+# syntax=docker/dockerfile:1
+FROM ubuntu:22.04
+ARG FLASK_APP
+
+# install app dependencies
+RUN apt-get update && apt-get install -y python3 python3-pip
+RUN pip install flask==3.0.*
+
+# install app
+COPY helloWorld.py /
+COPY templates/ /templates/
+
+# final configuration
+ENV FLASK_APP=${FLASK_APP}
+EXPOSE 8000
+CMD ["flask", "run", "--host", "0.0.0.0", "--port", "8000"]
+```
+
+Una vez que tengamos el `Dockerfile`, ya podemos construir la imagen así:
+```bash
+docker build -t test:latest --build-arg FLASK_APP=helloWorld .
+```
+
+Sabiendo que al usar `.` buscara un archivo llamado `dockerfile` en el directorio donde ejecutamos el `docker build`
+
+Esto crea la imagen, no obstante debemos correr el contenedor así:
+```bash
+docker run --name flaskApp -p 127.0.0.1:8000:8000 test:latest
+```
+
+También podemos entrar al contenedor:
+```bash
+docker exec -it flask /bin/bash
+```
+#### Argumentos (ARG) Vs Variables de Entorno (ENV)
+Dentro de las instrucciones de un `Dockerfile` vamos a encontrar a un par que a primera vista podrían sonar muy parecidas: Los argumentos y las variables de entorno
+
+En cuanto a los **argumentos** `ARG` son variables utilizadas únicamente durante la creación del contenedor. Inclusive la `flag` en línea de comando es `--build-arg` 
+
+En cambio las **variables de entorno** `ENV` están disponibles durante la construcción del contenedor pero también persisten en la imagen final y dentro del contenedor que quede corriendo.
+
+#### Secrets
+Argumentos y variables de entorno son inapropiadas para el manejo de información sensible, ya que persisten en la imagen y hasta se pueden ver durante la creación on en los logs.
+
+Para esto tenemos a los `secret mounts`. Tomemos este `dockerfile` como ejemplo:
+
+```dockerfile
+FROM debian:stable-slim
+RUN --mount=type=secret,id=SECRET_TEST,target=/run/secrets/SECRET_TEST \
+    cat /run/secrets/SECRET_TEST > /tmp/just_to_test_secret
+
+CMD ["cat", "/tmp/just_to_test_secret"]
+```
+Estamos montando un secret `--mount=type=secret` con un `id=SECRET_TEST` en un `target` que solo estará presente durante ese `RUN` en específico.
+
+Para nuestro ejemplo, y únicamente como medida didáctica, estamos aprovechando en copiar ese `SECRET_TEST` a un archivo temporal `/tmp/just_to_test_secret`
+
+Es importante mencionar que al usar `id=SECRET_TEST` estamos declarando dos cosas. el `id` y una variable de entorno `ENV` también llamada `SECRET_TEST`
+
+Entonces podemos usar una variable de entorno
+```bash
+export SECRET_TEST="this-is-the-secret-123"
+docker build --secret id=SECRET_TEST -t mysecret .
+```
+
+Pero también un archivo `secrets.txt`. Para esto necesitamos darle un `src`
+```bash
+docker build --secret id=SECRET_TEST,src=./secrets.txt -t mysecret .
+```
+
+Al correr el contenedor veremos la ejecución del `CMD` 
+```bash
+docker run --rm mysecret
+```

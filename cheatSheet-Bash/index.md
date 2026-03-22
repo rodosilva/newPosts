@@ -106,6 +106,12 @@ ls | tee prueba.txt
 ls | tee -a prueba.txt
 ```
 
+### - Comando: Find
+**Buscar**
+```bash
+find . -type f -exec grep -il "palabra-a-buscar" {} +
+```
+
 ## 3. CONDICIONALES
 ### 3.1 Forma Básica
 ```bash
