@@ -56,6 +56,8 @@ Necesitaremos una máquina con cualquier distribución de Linux. En mi caso util
 Docker nos permite separar nuestras aplicaciones de la infraestructura para entregar software de forma más rápida.
 Además nos da la habilidad de correr aplicaciones en un entorno aislado llamado contenedor. Quien contiene todo lo necesario para correr dicha aplicación.
 
+![](Pasted%20image%2020260322130103.png)
+
 #### Instalación y "Hello World"
 Configuramos el repositorio de `Docker`
 ```bash
@@ -77,7 +79,7 @@ EOF
 
 sudo apt update
 ```
-
+Link: [Install Ubuntu](https://docs.docker.com/engine/install/ubuntu/)
 Instalamos la última versión:
 ```bash
 sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
