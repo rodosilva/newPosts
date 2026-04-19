@@ -11,7 +11,6 @@ title = 'Docker Runtime'
 	- Requisitos y qué necesitaremos
 	- ¿Qué es un Runtime y por qué Docker?
 	- Instalación y "Hello World"
-	- Laboratorio: Revisando el ciclo de vida de un contenedor
 - **Arquitectura de Docker**
 	- Docker Engine
 	- Imágenes Vs Contenedores
@@ -21,14 +20,11 @@ title = 'Docker Runtime'
 - **Almacenamiento**
 	- Volúmenes
 	- Bind Mounts
-	- Laboratorio: Crear un contenedor donde la data sea persistente
 - **Redes y Conectividad**
 	- Mapeo de Puertos: Publicando servicios al exterior
 	- Redes Bridge: Comunicación entre contenedores
-	- Laboratorio: Revisando la comunicación entre dos contenedores
 - **Contenedores**
 	- Arranque automático
-	- Laboratorio: Reiniciar la máquina local y observar el inicio automático del contenedor
 - **Imágenes**
 	- Pull y Push
 	- Tags y versionado
@@ -37,14 +33,11 @@ title = 'Docker Runtime'
 	- Instrucciones: FROM, RUN, WORKDIR, COPY, CMD
 	- Argumentos y Variables de Entorno
 	- Secrets
-	- Laboratorio: Crear nuestro Dockerfile y ver diferencias entre argumentos y variables de entorno
 - **Docker Compose**
 	- Estructura del archivo
 	- Servicios, redes y volúmenes
 	- Dependencias entre contenedores
 - **Limpiando el Espacio de Trabajo**
-- **Laboratorio: Proyecto Final**
-
 
 ## DESARROLLO
 ### 1. Introducción
@@ -354,22 +347,19 @@ Donde `myregistryhost` es el nombre del registry privado y `5000` es el puerto q
 ### 7. Dockerfile
 
 #### Instrucciones
-Docker builds images by reading the instructions from a Dockerfile. A Dockerfile is a text file containing instructions for building your source code. The Dockerfile instruction syntax is defined by the specification reference in the [Dockerfile reference](https://docs.docker.com/reference/dockerfile/).
-
-Here are the most common types of instructions:
-
 Docker crea las imágenes a partir de la lectura de instrucciones de un `Dockerfile`. Que es básicamente un documento de texto. La sintaxis está definida por esta [referencia](https://docs.docker.com/reference/dockerfile/)
 
 Entre los más comunes encontramos:
 
-| Instrucción                                                                                       | Descripción                     |
-| ------------------------------------------------------------------------------------------------- | ------------------------------- |
-| `FROM <image>`                                                                                    | Define la base de la imag       |
-| `RUN <command>`                                                                                   | Ejecuta comandos en una nueva c |
-| `WORKDIR <directory>`                                                                             | Define el directorio de trabajo |
-| `COPY <src> <dest>`                                                                               | Copia archivos o direct         |
-| `CMD <command>`   Define el programa por defecto que correrá una vez iniciado el contenedor ciado |                                 |
+| Instrucción           | Descripción                                                               |
+| --------------------- | ------------------------------------------------------------------------- |
+| `FROM <image>`        | Define la base de la imagen                                               |
+| `RUN <command>`       | Ejecuta comandos en una nueva capa                                        |
+| `WORKDIR <directory>` | Define el directorio de trabajo                                           |
+| `COPY <src> <dest>`   | Copia archivos o directorios                                              |
+| `CMD <command>`       | Define el programa por defecto que correrá una vez iniciado el contenedor |
 Ejemplo:
+
 ```dockerfile
 # syntax=docker/dockerfile:1
 FROM ubuntu:22.04
@@ -388,6 +378,7 @@ ENV FLASK_APP=${FLASK_APP}
 EXPOSE 8000
 CMD ["flask", "run", "--host", "0.0.0.0", "--port", "8000"]
 ```
+**NOTA:** El código puede clonarse desde: `https://github.com/rodosilva/dockerRuntime.git`
 
 Una vez que tengamos el `Dockerfile`, ya podemos construir la imagen así:
 ```bash
@@ -403,7 +394,7 @@ docker run --name flaskApp -p 127.0.0.1:8000:8000 test:latest
 
 También podemos entrar al contenedor:
 ```bash
-docker exec -it flask /bin/bash
+docker exec -it flaskApp /bin/bash
 ```
 #### Argumentos (ARG) Vs Variables de Entorno (ENV)
 Dentro de las instrucciones de un `Dockerfile` vamos a encontrar a un par que a primera vista podrían sonar muy parecidas: Los argumentos y las variables de entorno
@@ -445,3 +436,155 @@ Al correr el contenedor veremos la ejecución del `CMD`
 ```bash
 docker run --rm mysecret
 ```
+
+Si quisiéramos que el contenedor que quede corriendo y no se destruya luego de ejecutar su tarea, podemos usar:
+```bash
+# Opción 1
+docker run --rm -itd mysecret /bin/bash
+# Opción 2
+docker run --rm -itd mysecret tail -f /dev/null
+# Opción 3 
+docker run --rm -itd mysecret sleep infinity
+```
+
+### 8. Docker Compose
+`Docker compose` es una herramienta para definir y correr aplicaciones multi contenedor. Logrando así una experiencia eficiente de desarrollo.
+
+Además simplifica el control de tu aplicación. Haciendo fácil el manejo de servicios, redes y volúmenes en un único archivo de configuración `YAML`. 
+
+Naturalmente primero deberemos instalarlo: 
+- [Instalar Docker Compose](https://docs.docker.com/desktop/setup/install/linux/)
+
+Veamos todo en la práctica:
+Código completo: [Github](https://github.com/rodosilva/dockerRuntime/tree/main/dockerCompose)
+```yaml
+services:
+  web:
+    image: nginx
+    volumes:
+      - ./nginx/nginx.conf:/tmp/nginx.conf
+    environment: 
+      - FLASK_SERVER_ADDR=backend:9091  
+    command: /bin/bash -c "envsubst < /tmp/nginx.conf > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'" 
+    ports:
+      - 80:80
+    depends_on:
+      - backend
+
+  backend:
+    build:
+      context: flask
+      target: builder
+    # flask requires SIGINT to stop gracefully
+    # (default stop signal from Compose is SIGTERM)
+    stop_signal: SIGINT
+    environment:
+      - FLASK_SERVER_PORT=9091
+    volumes:
+      - ./flask:/src
+    depends_on:
+      -  mongo  
+
+  mongo:
+    image: mongo
+```
+
+En este ejemplo encontramos un `Reverse Proxy Nginx`. 
+Veamos la configuración:
+```bash
+server {
+  listen 80;
+  location / {
+  proxy_pass http://$FLASK_SERVER_ADDR;
+  }
+}
+```
+El la configuración vemos que al apuntar a la raíz `/` `Nginx` lo dirige a `http://$FLASK_SERVER_ADDR`.
+
+Dicha variable de entorno `$FLASK_SERVER_ADDR` está declarada en el `compose.yaml`. `Docker Compose` reconoce la IP de cada uno de sus servicios. Es por ello que sabe quien es `backend:9091`
+
+En cuanto a `Flask` la imagen parte de un `Dockerfile`:
+```dockerfile
+# syntax=docker/dockerfile:1.4
+FROM --platform=$BUILDPLATFORM python:3.10-alpine AS builder
+WORKDIR /src
+COPY requirements.txt /src
+RUN --mount=type=cache,target=/root/.cache/pip \
+pip3 install -r requirements.txt
+COPY . .
+CMD ["python3", "server.py"]
+```
+
+Que al convertirse un contenedor, este ejecuta un script:
+```python
+#!/usr/bin/env python
+import os
+from flask import Flask
+from pymongo import MongoClient
+
+app = Flask(__name__)
+client = MongoClient("mongo:27017")
+
+@app.route('/')
+def todo():
+  try:
+    client.admin.command('ismaster')
+  except:
+    return "Server not available"
+  return "Hello from the MongoDB client!\n"
+
+if __name__ == "__main__":
+app.run(host='0.0.0.0', port=os.environ.get("FLASK_SERVER_PORT", 9090), debug=True)
+```
+
+Para iniciar todo simplemente deberemos ejecutar:
+```bash
+docker compose up -d
+```
+Y para finalizar:
+```bash
+docker compose down
+```
+
+### 9. Limpiando El Entorno
+Sabemos que `Docker` consume nuestro espacio de disco en nuestra máquina anfitrión. Para eso es bueno borrar contenedores, volúmenes, imágenes, redes, etc, para poder recuperar disco.
+
+Podemos forzar el cierre y borrado de contenedores así:
+```bash
+# Borrar un contenedor
+docker rm <CONTAINER>
+# Forzar borrado de todos
+docker container prune -f
+```
+
+Podemos remover las imágenes
+```bash
+# Las listamos
+docker images
+# Las borramos
+docker rmi <IMAGE ID>
+# Borramos todas las que no se están usando
+docker image prune
+```
+
+Podemos borrar volúmenes y redes
+```bash
+# Volúmenes
+docker volume rm <VOLUME ID>
+# Redes
+docker network rm <NETWORK ID>
+```
+
+Podemos borrar la caché de construcción
+```bash
+docker builder prune
+```
+
+O también podemos hacer una limpieza general
+```bash
+# Borrado seguro
+docker system prune
+# Borrado más agresivo
+docker prune -a
+```
+
