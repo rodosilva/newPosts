@@ -585,6 +585,6 @@ O también podemos hacer una limpieza general
 # Borrado seguro
 docker system prune
 # Borrado más agresivo
-docker prune -a
+docker system prune -a
 ```
 
