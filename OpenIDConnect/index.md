@@ -132,10 +132,15 @@ Este proyecto demuestra una implementación segura y moderna de autenticación e
 
 ## Beneficios Clave
 ✅ **Sin Credenciales Hardcodeadas**: No es necesario almacenar claves de acceso de AWS en secretos de GitHub
+
 ✅ **Tokens Temporales**: Cada ejecución utiliza un token JWT de corta duración generado por GitHub
+
 ✅ **Auditoría Mejorada**: AWS registra exactamente qué repositorio y rama ejecutó cada acción
+
 ✅ **Control Granular**: Las políticas IAM permiten especificar qué repositorios y ramas pueden asumir roles específicos
+
 ✅ **Menor Riesgo de Seguridad**: Reducción significativa de la superficie de ataque al eliminar credenciales de largo plazo
+
 ## Flujo General
 1. **GitHub Actions** genera un token JWT cuando se ejecuta un workflow
 2. El token se envía a **AWS STS** (Security Token Service) para intercambiarlo por credenciales temporales
