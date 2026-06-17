@@ -112,6 +112,150 @@ ls | tee -a prueba.txt
 find . -type f -exec grep -il "palabra-a-buscar" {} +
 ```
 
+### - Comandos: Crear Usuario Sudo
+```bash
+# Crear usuario
+sudo adduser [usuario]
+# Hacerlo sudo
+sudo usermod -aG sudo [usuario]
+# Revisar el usuario
+id [usuario]
+sudo passwd -S [usuario]
+```
+
+Para darle permisos al usuario podemos crear y editar: `/etc/sudoers.d/[usuario]`
+```bash
+# Le podemos dar permiso de que el usuario no necesite colocar contraseña para volverse root
+cat /etc/sudoers.d/[usuario]
+[usuario] ALL=(ALL) NOPASSWD:ALL
+
+# Y verificamos
+sudo -l
+```
+
+### - Comandos: ssh
+```bash
+# Añadir una maquina remota a tus hosts conocidos
+ssh-keyscan -t ed25519 [IP_HOST_REMOTO] | tee /root/.ssh/known_hosts
+
+# Enviar tu llave pública a un host remoto y así permitir el acceso ssh sin el uso de usuario y contraseña
+ssh-copy-id [usuario]@[IP_HOST_REMOTO]
+```
+
+#### Adicionales: ssh
+Archivo que controla como el servidor acepta las conexiones:
+```bash
+ls /etc/ssh/sshd_config
+# Para comprobar las configuraciones:
+sudo sshd -T | grep -iE 'passwordauthentication|userpam'
+
+# Para permitir que algún usuario permita conexión ssh
+# Se añade al final del archivo /etc/ssh/sshd_config
+Match User [User]
+	PasswordAuthentication yes
+```
+
+### Comandos: Networking
+`Netplan` es la herramienta encargada de gestionar las direcciones IP en `Ubuntu`.
+Pero para eso es necesario tener como referencia las interfaces de red:
+```bash
+# Ver interfaces de Red
+ip addr
+1: lo: <LOOPBACK,UP,LOWER_UP>
+2: eth0: <NO-CARRIER,BROADCAST,MULTICAST,UP>
+3: wlan0: <BROADCAST,MULTICAST,UP,LOWER_UP>
+
+# También podemos usar el mismo comando de netplan
+sudo netplan status -a
+```
+
+Si lo que deseamos es asignar una IP de forma temporal que se perderá luego de un reinicio. Entonces podemos usar:
+```bash
+# Asignar una IP
+sudo ip addr add 192.168.1.100/24 dev enp0s25
+
+# Up o Down al Link
+ip link set dev enp0s25 up
+ip link set dev enp0s25 down
+
+# Establecer el gateway
+sudo ip route add default via 192.168.1.1
+
+# Verificar ruta por defecto
+ip route show
+
+# Añadir DNS
+sudo resolvectl dns enp0s25 8.8.8.8 8.8.4.4
+
+# Flush
+ip addr flush eth0
+```
+
+Ahora bien, si lo que deseamos es establecer configuraciones permanentes. Usaríamos el `netplan`
+
+```yaml
+# Usando DHCP
+# vim /etc/netplan/99_config.yaml
+network:
+  version: 2
+  renderer: networkd
+  ethernets:
+    enp3s0:
+      dhcp4: true
+
+# Usando IP fija
+network:
+  version: 2
+  renderer: networkd
+  ethernets:
+    eth0:
+      addresses:
+        - 10.10.10.2/24
+      routes:
+        - to: default
+          via: 10.10.10.1
+      nameservers:
+          search: [mydomain, otherdomain]
+          addresses: [10.10.10.1, 1.1.1.1]
+```
+
+Y para el caso del `WiFi`
+
+```bash
+network:
+  version: 2
+  renderer: networkd
+  wifis:
+    wlan0:
+      addresses:
+        - 192.168.1.11/24
+      routes:
+        - to: default
+          via: 192.168.1.1
+      access-points:
+        "SSID":
+          password: "password"
+      nameservers:
+        addresses:
+          - 8.8.8.8
+          - 8.8.4.4
+
+```
+
+Finalmente se aplica el `netplan`:
+```bash
+sudo netplan apply
+# Y reiniciar servicios y socket
+sudo systemctl restart ssh
+sudo systemctl restart ssh.socket
+```
+
+Nunca está demás revisar el firewall:
+```bash
+sudo ufw status
+sudo ufw allow ssh
+```
+
 ## 3. CONDICIONALES
 ### 3.1 Forma Básica
 ```bash

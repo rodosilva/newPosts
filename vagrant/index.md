@@ -33,14 +33,21 @@ Con Vagrant, tenemos la seguridad de que cualquier cosa que se malogre, será f�
 ## Capítulo 1: Requerimientos
 
 - VirtualBox: [Instalación](https://www.virtualbox.org/wiki/Linux_Downloads)
+	- `IMPORTANTE: Habilitar virtualización en CPU UEFI/BIOS`
 - Vagrant: [Instalación](ttps://developer.hashicorp.com/vagrant/install)
 
 ## Capítulo 2: Mi Primer Vagrantfile
 
 Vamos a iniciar creando una máquina virtual utilizando solamente código.
-Para ello, crearemos un nuevo documento dentro de cualquier carpeta destinada para nuestro proyecto
+Para ello, crearemos un nuevo documento dentro de cualquier carpeta destinada para nuestro proyecto.
 
-El documento deberá llamarse `vagrantfile`
+Pero antes de eso, vamos a explorar la forma declarativa de crear el `Vagrantfile`.
+```bash
+vagrant init ubuntu/jammy64 --box-version 20241002.0.0
+```
+Esta es una forma sencilla de crear directamente el `Vagrantfile`. tendrá comentadas las líneas de código más comúnmente utilizadas.
+
+El documento deberá llamarse `Vagrantfile`
 
 Lo primero que debemos elegir es la versión de la configuración que estaremos utilizando.
 La última versión que se tiene `2`
@@ -84,6 +91,8 @@ Vagrant.configure("2") do |config|
   
     config.vm.define "labServer01" do |host|
       ## Definir Maquina virtual dentro de este Bloque
+      host.vm.hostname = "labServer01.local"
+      host.vm.network "public_network", ip: "192.168.0.1", hostname: true
       host.vm.network "public_network"
     end
 end
@@ -100,11 +109,32 @@ Vagrant.configure("2") do |config|
     
     ## Definir Un Nuevo Bloque
   
-    config.vm.define "labServer01" do |host|
+    config.vm.define "labServer02" do |host|
       ## Definir Maquina virtual dentro de este Bloque
-      host.vm.network "private_network", ip:"192.168.56.10"
+      host.vm.hostname = "labServer02.local"
+      host.vm.network "private_network", ip:"192.168.56.2", hostname: true
+      host.vm.network "private_network", type: "dhcp"
     end
 end
+```
+
+Esto va a crear una red virtual en la máquina anfitrión. En mi caso:
+```bash
+ip addr
+[...]
+6: vboxnet0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP group default qlen 1000
+    link/ether 0a:00:27:00:00:00 brd ff:ff:ff:ff:ff:ff
+    inet 192.168.56.1/24 brd 192.168.56.255 scope global vboxnet0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::800:27ff:fe00:0/64 scope link 
+       valid_lft forever preferred_lft forever
+
+```
+Este `host-only network adapter - vboxnet0` es creado por `Virtual Box`.
+Y se puede eliminar desde la consola o con el comando:
+```bash
+# Eliminar host-only network adapter
+VBoxManage hostonlyif remove vboxnet0
 ```
 
 **Adicional a ello**, podemos reenviar puertos de la `box` hacia el `host` o anfitrión.
@@ -120,14 +150,27 @@ Vagrant.configure("2") do |config|
     
     ## Definir Un Nuevo Bloque
   
-    config.vm.define "labServer01" do |host|
+    config.vm.define "labServer03" do |host|
       ## Definir Maquina virtual dentro de este Bloque
-      host.vm.network "private_network", ip:"192.168.56.10"
-      host.vm.network "forwarded_port", guest:80, host:8080
+      host.vm.hostname = "labServer03.local"
+      host.vm.network "private_network", ip:"192.168.56.3", hostname: true
+      host.vm.network "forwarded_port", guest: 80, host: 8080
+      host.vm.provision "shell", path: "nginx.sh"
     end
 end
 ```
 En ese ejemplo, nuestro puerto local `8080` sera dirigido hacia el puerto `80` del la máquina virtual.
+Para poder ejemplificar el `forwarded_port`. Hemos instalado un servidor `Nginx` usando el script:
+```bash
+#!/bin/bash
+
+# Instalar NGINX
+sudo apt update
+sudo apt install nginx -y
+
+# Inciar el servicio de NGINX
+sudo service nginx start
+```
 
 ## Capítulo 4: Múltiples Máquinas Virtuales
 Para generar más de una máquina virtual, deberemos asignar bloques.
