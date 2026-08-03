@@ -155,7 +155,27 @@ Match User [User]
 	PasswordAuthentication yes
 ```
 
-### Comandos: Networking
+### - Comandos ssl
+Para crear un certificado `self-signed` 
+```bash
+openssl req -x509 -nodes -newkey rsa:2048 -days 365 \
+  -keyout ./nginx/certs/key.pem \
+  -out ./nginx/certs/cert.pem \
+  -subj "/CN=bw.local"
+```
+### - Comandos: dpkg
+En los repositorios se suele tener el `Pool` y el `Index` en directorios distintos.
+Uno son los paquetes como tal y el otro la metadata.
+```bash
+# Para ver que un paquetes esté en buen estado
+dpkg-deb --info [Nombre_Paquete]
+# Para crear el Index del pool
+dpkg-scanpackages --multiversion
+# Para ver la metadata podemos usar curl
+curl [https://.../packages]
+```
+
+### - Comandos: Networking
 `Netplan` es la herramienta encargada de gestionar las direcciones IP en `Ubuntu`.
 Pero para eso es necesario tener como referencia las interfaces de red:
 ```bash

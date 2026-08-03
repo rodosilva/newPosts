@@ -34,7 +34,7 @@ Con Vagrant, tenemos la seguridad de que cualquier cosa que se malogre, será f�
 
 - VirtualBox: [Instalación](https://www.virtualbox.org/wiki/Linux_Downloads)
 	- `IMPORTANTE: Habilitar virtualización en CPU UEFI/BIOS`
-- Vagrant: [Instalación](ttps://developer.hashicorp.com/vagrant/install)
+- Vagrant: [Instalación](https://developer.hashicorp.com/vagrant/install)
 
 ## Capítulo 2: Mi Primer Vagrantfile
 

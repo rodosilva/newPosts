@@ -62,3 +62,11 @@ Donde `<domain>-chain.pem` es el `CA certificate` y `<domain>.nokey.crt` es el `
 openssl storeutl -noout -text -certs <domain>.crt | grep -E "Subject:|Issuer:|Not before|Not After"
 ```
 
+- Crear certificados `self-signed`
+
+```bash
+openssl req -x509 -nodes -newkey rsa:2048 -days 365 \
+  -keyout ./nginx/certs/key.pem \
+  -out ./nginx/certs/cert.pem \
+  -subj "/CN=bw.local"
+```
