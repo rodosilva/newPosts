@@ -79,5 +79,16 @@ Entonces para rebasar primero:
 - `git fetch origin`
 - `git rebase origin/Main` o también `git switch main` + `git pull` + `git switch [branch]` + `git rebase main`
 - `git push origin [branch] + --force-with-lease`: Finalmente mandamos la rama que ha rebasado lo último de main y lo forzamos puesto que el historia ha sido cambiado.
+
+### Tags
+- `git tag -l` Listar tags
+- `git tag <nombre-del-tag>` Tag simple puntero a commit actual
+- `git tag -a <nombre-del-tag> -m "Mensaje descriptivo"`
+- `git push origin <nombre-del-tag>` Subir a GitHub
+- `git push origin --tags`
+- `git tag -d <nombre-del-tag>` Borrar etiqueta
+- `git push origin --delete <nombre-del-tag>` Borrar del remoto
+- 
+
 ### Extras
 - `basename -s .git "$(git config --get remote.origin.url)"` -> Ver el nombre del repo

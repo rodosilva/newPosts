@@ -70,3 +70,39 @@ openssl req -x509 -nodes -newkey rsa:2048 -days 365 \
   -out ./nginx/certs/cert.pem \
   -subj "/CN=bw.local"
 ```
+
+- Crear Certificate Authority y certificados sobre la base del CA
+
+```bash
+openssl genrsa -out myhomelab-ca.key 4096
+
+openssl req -x509 -new -nodes \
+-key myhomelab-ca.key \
+-sha256 -days 3650 \
+-out myhomelab-ca.crt \
+-subj "/CN=MyHomeLab CA"
+
+openssl genrsa -out cert.key 2048
+
+openssl req -new -key cert.key -out cert.csr \
+-subj "/CN=192.168.1.11"
+
+openssl x509 -req -in cert.csr \
+-CA myhomelab-ca.crt \
+-CAkey myhomelab-ca.key \
+-CAcreateserial \
+-out cert.pem \
+-days 825 \
+-sha256 \
+-extfile <(printf "subjectAltName=IP:192.168.1.11")
+```
+
+De igual forma para que la PC confíe en el certificado hay que:
+```bash
+sudo cp myhomelab-ca.crt /usr/local/share/ca-certificates/myhomelab-ca.crt
+sudo update-ca-certificates
+```
+
+Y el `Chrome` hay que agregar el certificado:
+[Certificate Manager Chrome](chrome://certificate-manager/)
+
