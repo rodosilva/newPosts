@@ -468,3 +468,167 @@ resource denyAssignmet 'Microsoft.Authorization/denyAssignments@2020-10-01' = {
     }
 }
 ```
+
+## ALMACENAMIENTO
+### Introducción
+- `Blob Storage`
+
+### Azure Storage
+Almacenar objetos en la nube Microsoft
+- Escalable, seguro y de alta disponibilidad
+- Tipos
+	- `Table Storage`: NoSQL
+	- `Queue Storage`: Colas, mensajería, asíncrona
+	- `Blob Storage`: Almacenar grandes cantidades, textos, binarios, etc.
+
+- Tipos (con Máquinas virtuales)
+	- `Azure Files`: SMB, NFS
+	- `Azure Disk Storage`: Alto rendimiento
+
+### Azure Blob Storage
+Almacenar grandes volúmenes de datos
+- Cargas de trabajo nativas
+- Archivos
+- Data Lake
+- Computación de alto rendimiento
+- IA y Machine Learning
+
+**Escalable, duradero y disponible**
+Replicación geográfica
+Protegido `RBAC`
+Optimizado para lagos de datos
+Administración de datos completa: Ciclo de vida de extremo a extremo, control basado en directivas y almacenamiento inmutable `WORM`
+
+**Usos**
+- Imágenes
+- Streaming
+- Logs
+- Almacén de datos: backups
+
+**Tipos de Blob**
+- **Block**: Cargas masivas de datos. Bloques individuales que se gestionan de forma separada
+- **Append**: Bloques optimizados para agregar datos al final. Para `logs` o registros de escritura continua.
+- **Page**: Acceso directo a cualquier parte archivo. Lectura y escritura aleatoria.
+
+**Niveles de Acceso**
+- **Hot**: Accedidos frecuentemente. Tiempos de acceso más bajo y costos de acceso más altos
+- **Cool**: Almacenamiento para datos accedidos ocasionalmente. Menor costo
+- **Cold**: Rara vez se accede.
+- **Archive**: Datos a los que rara vez se accede. Costos más bajos. Tiempos de recuperación más largos.
+
+**Estructura de Azure Blob**
+- `Cuenta de almacenamiento`: Raíz
+- `Contenedor`: Organiza los blobs
+- `Blob`: El archivo en sí
+![](Pasted%20image%2020261024111619.png)
+
+## ALMACENAMIENTO (PT 2)
+
+### Azure Archive Storage
+Solución rentable para almacenamiento a largo plazo. Datos raramente accedidos
+Movimiento entre niveles de almacenamiento
+- Clasificación, búsqueda
+- Cifrado
+
+**Características**
+- Requerimiento: Por políticas, legislación y recuperación
+- Precios más bajos
+- Características: Duradero, cifrado, estable. Datos que se acceden con poca frecuencia
+- Liberar almacenamiento: Liberar on premises
+- Seguro: financiero, datos médicos
+- Blob: Almacenamiento Blob, tiene las mismas herramientas
+
+![](Pasted%20image%2020261101162242.png)
+
+### Redundancia de Almacenamiento
+Datos disponibles con copias.
+Siempre crea múltiples copias de nuestros datos, es invisible para el usuario final
+- Zona única, múltiples zonas, múltiples regiones
+
+**Región Única**
+`LRS` y `ZRS`
+
+**Múltiples regiones**
+`GRS` y `GZRS`
+
+Todas las opciones incluyen:
+- Tres copias en la region primaria
+- Tres copias en la región secundaria (Para opciones de múltiples regiones)
+
+#### Almacenamiento con redundancia local LRS
+Crea automáticamente 3 copias en la región primaria para garantizar su durabilidad
+- Más económica
+- Proteger datos contra fallos en el hardware
+- Todo dentro de una única región
+- No ofrece protección contra interrupciones de zona o regionales
+
+#### Almacenamiento con redundancia de zona ZRS
+- Replica datos en diferentes zonas de disponibilidad dentro de una misma región
+- Mantiene 3 copias
+- Salvaguardar los datos incluso si una zona completa enfrenta problemas
+- Costo más alto
+- No protege catástrofes que afecten regiones completas
+
+#### Almacenamiento con redundancia geográfica GRS
+- Replica datos en diferentes centro de de datos en regiones geográficamente separadas
+- Mantiene 3 copias en la región primaria y 3 en una secundaria
+- Alta disponibilidad
+- Costo superior
+- Ideal para quienes necesiten el más alto nivel de protección y disponibilidad
+
+#### Almacenamiento con redundancia de zonas geográficas GZRS
+- `ZRS` + ` GRS`
+- 3 copias de datos distribuidas en diferentes zonas de disponibilidad en la región primaria `ZRS`
+- 3 copias adicionales en una región secundaria `LRS`
+![](Pasted%20image%2020261101164106.png)
+
+### Almacenamiento Premium
+Requisitos de baja latencia
+**Tipos** de almacenamiento
+Opciones de redundancia
+
+- **Standard**
+	- Soporta todos los tipos de almacenamiento y opciones de redundancia
+	- **Premium**
+		- Blobs en bloques `Premium block blobs` Rendimiento superior
+			- Altas tasas de transacciones
+		- Recursos compartidos de archivos `Premium file shares` Comparticiones de archivos de rendimiento optimizado para operaciones de archivo más rápida y eficiente
+			- Aplicaciones empresariales que necesitan escalarse
+		- Blobs de páginas `Premium page Blobs`: Blobs de página con un rendimiento más elevado, adecuado para cargas de trabajo intensivas
+			- Operaciones de lectura y escritura aleatorias
+
+#### Block blobs
+Ideal para cargas de trabajo de almacenamiento blob de baja latencia
+`AI` o `IoT`
+- **Redundancia** soporta redundancia local `LRS` y `ZRS`
+- Aplicaciones que necesitan un acceso rápido y un tiempo de respuesta bajo. Tareas críticas y operaciones intensivas
+
+#### Premium File Shares
+Alto rendimiento
+**Protocolos**
+- `SMB` y `NFS`
+- `Windows` y `Linux`
+
+**Redundancia**
+- `LRS` y `ZRS`
+
+#### Page Blobs
+Usado para discos virtuales no gestionados
+**Redundancia**
+`LRS` y `ZRS`
+Útiles para escenarios que requieren `I/O` aleatorio, como bases de datos y discos de máquinas virtuales
+
+![](Pasted%20image%2020261101172156.png)
+
+### Movimiento de Datos
+Criterios
+- Frecuencia de transferencia
+- Tamaño de datos
+- Ancho de banda de la red
+
+**Herramientas**
+**AzCopy**
+Para copiar datos hacia y desde servicios de almacenamiento de Azure
+```bash
+# Transferir archivos
+azcopy
